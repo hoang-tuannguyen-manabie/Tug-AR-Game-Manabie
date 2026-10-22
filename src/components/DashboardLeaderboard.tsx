@@ -164,10 +164,6 @@ export function DashboardLeaderboard({
     : -1;
   const currentRank = currentRankIndex >= 0 ? currentRankIndex + 1 : null;
 
-  const top1 = sortedList[0];
-  const top2 = sortedList[1];
-  const top3 = sortedList[2];
-
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full ppt-page-enter">
       {/* HEADER DASHBOARD */}
@@ -307,8 +303,8 @@ export function DashboardLeaderboard({
         </div>
       )}
 
-      {/* BỤC VINH DANH TOP 1 - 2 - 3 HOẶC THÔNG BÁO SẴN SÀNG */}
-      {sortedList.length === 0 ? (
+      {/* THÔNG BÁO KHI CHƯA CÓ LƯỢT CHƠI NÀO */}
+      {sortedList.length === 0 && (
         <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-surface-container-low/70 rounded-2xl border border-white/10 my-2">
           <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-3 text-tertiary shadow-inner">
             <span className="material-symbols-outlined text-[36px]">emoji_events</span>
@@ -317,160 +313,6 @@ export function DashboardLeaderboard({
           <p className="text-body-sm text-on-surface-variant max-w-md mt-1 leading-relaxed">
             Chưa có lượt chơi nào được ghi nhận. Hãy bắt đầu trận đấu kéo co đầu tiên để mở màn Bảng vinh danh sự kiện Golive!
           </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 items-end pt-3">
-          {/* TOP 2 (Á QUÂN) - BÊN TRÁI NẾU CÓ */}
-          <div className="order-2 md:order-1">
-            {top2 ? (
-              <div className="rounded-2xl bg-gradient-to-b from-slate-400/15 via-surface-container to-surface-container-low p-4 sm:p-5 border-2 border-slate-300/40 shadow-[0_8px_30px_rgba(203,213,225,0.15)] flex flex-col items-center text-center relative overflow-hidden group hover:scale-[1.01] transition-transform">
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-slate-400 to-slate-200" />
-                <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-900 flex items-center justify-center text-2xl font-black shadow-lg mb-2">
-                  🥈
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-300/20 text-slate-200 border border-slate-300/30 mb-2">
-                  HẠNG 2 • Á QUÂN
-                </span>
-                <h3 className="text-headline-sm font-black text-on-surface line-clamp-1 mb-0.5">
-                  {top2.name}
-                </h3>
-                <span className="text-body-xs text-on-surface-variant font-medium mb-3">
-                  {top2.schoolOrRole}
-                </span>
-
-                <div className="w-full bg-surface-container-lowest/80 rounded-xl p-2.5 flex items-center justify-around border border-white/5 text-center">
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Độ chính xác</span>
-                    <span className="text-headline-xs font-black text-tertiary">
-                      {top2.correctCount}/{top2.totalQuestions}
-                    </span>
-                  </div>
-                  <div className="w-px h-6 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Thời gian</span>
-                    <span className="text-headline-xs font-black text-amber-300 font-mono">
-                      {top2.totalDurationSec}s
-                    </span>
-                  </div>
-                  <div className="w-px h-6 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Điểm số</span>
-                    <span className="text-headline-xs font-black text-on-surface">
-                      {top2.score} pts
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/15 p-6 flex flex-col items-center justify-center text-center opacity-60 min-h-[220px]">
-                <span className="text-3xl mb-2">🥈</span>
-                <span className="text-label-caps text-on-surface-variant uppercase text-[11px]">Đang chờ Á Quân</span>
-              </div>
-            )}
-          </div>
-
-          {/* TOP 1 (QUÁN QUÂN) - Ở GIỮA, NHÔ CAO HƠN */}
-          <div className="order-1 md:order-2 md:-translate-y-3">
-            {top1 ? (
-              <div className="rounded-2xl bg-gradient-to-b from-amber-500/25 via-surface-container-high to-surface-container p-5 sm:p-6 border-2 border-amber-400 shadow-[0_12px_45px_rgba(251,191,36,0.35)] flex flex-col items-center text-center relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 animate-pulse" />
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 text-amber-950 flex items-center justify-center text-3xl font-black shadow-2xl mb-2.5 border-2 border-white/40 ring-4 ring-amber-400/30">
-                  🥇
-                </div>
-
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-caps uppercase font-black bg-amber-400/25 text-amber-300 border border-amber-400/40 mb-2">
-                  <span className="material-symbols-outlined text-[15px]">military_tech</span>
-                  <span>QUÁN QUÂN • TOP 1 GOLIVE</span>
-                </div>
-
-                <h3 className="text-headline-md sm:text-headline-lg font-black text-amber-300 line-clamp-1 mb-0.5 drop-shadow-sm">
-                  {top1.name}
-                </h3>
-                <span className="text-body-sm text-on-surface-variant font-semibold mb-3.5">
-                  {top1.schoolOrRole}
-                </span>
-
-                <div className="w-full bg-surface-container-lowest/90 rounded-xl p-3 flex items-center justify-around border border-amber-400/20 text-center shadow-inner">
-                  <div>
-                    <span className="text-[9px] uppercase text-amber-400/80 font-bold block">Đúng câu</span>
-                    <span className="text-headline-sm font-black text-tertiary">
-                      {top1.correctCount}/{top1.totalQuestions}
-                    </span>
-                  </div>
-                  <div className="w-px h-7 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-amber-400/80 font-bold block">Thời gian</span>
-                    <span className="text-headline-sm font-black text-amber-300 font-mono">
-                      {top1.totalDurationSec}s
-                    </span>
-                  </div>
-                  <div className="w-px h-7 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-amber-400/80 font-bold block">Tổng điểm</span>
-                    <span className="text-headline-sm font-black text-white">
-                      {top1.score}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/15 p-6 flex flex-col items-center justify-center text-center opacity-60 min-h-[220px]">
-                <span className="text-3xl mb-2">🥇</span>
-                <span className="text-label-caps text-on-surface-variant uppercase text-[11px]">Đang chờ Quán Quân</span>
-              </div>
-            )}
-          </div>
-
-          {/* TOP 3 (QUÝ QUÂN) - BÊN PHẢI NẾU CÓ */}
-          <div className="order-3 md:order-3">
-            {top3 ? (
-              <div className="rounded-2xl bg-gradient-to-b from-amber-700/15 via-surface-container to-surface-container-low p-4 sm:p-5 border-2 border-amber-600/40 shadow-[0_8px_30px_rgba(217,119,6,0.15)] flex flex-col items-center text-center relative overflow-hidden group hover:scale-[1.01] transition-transform">
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-600 to-amber-700" />
-                <div className="w-12 h-12 rounded-full bg-amber-700 text-amber-100 flex items-center justify-center text-2xl font-black shadow-lg mb-2">
-                  🥉
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-700/20 text-amber-300 border border-amber-600/30 mb-2">
-                  HẠNG 3 • QUÝ QUÂN
-                </span>
-                <h3 className="text-headline-sm font-black text-on-surface line-clamp-1 mb-0.5">
-                  {top3.name}
-                </h3>
-                <span className="text-body-xs text-on-surface-variant font-medium mb-3">
-                  {top3.schoolOrRole}
-                </span>
-
-                <div className="w-full bg-surface-container-lowest/80 rounded-xl p-2.5 flex items-center justify-around border border-white/5 text-center">
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Độ chính xác</span>
-                    <span className="text-headline-xs font-black text-tertiary">
-                      {top3.correctCount}/{top3.totalQuestions}
-                    </span>
-                  </div>
-                  <div className="w-px h-6 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Thời gian</span>
-                    <span className="text-headline-xs font-black text-amber-300 font-mono">
-                      {top3.totalDurationSec}s
-                    </span>
-                  </div>
-                  <div className="w-px h-6 bg-white/10" />
-                  <div>
-                    <span className="text-[9px] uppercase text-on-surface-variant block">Điểm số</span>
-                    <span className="text-headline-xs font-black text-on-surface">
-                      {top3.score} pts
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/15 p-6 flex flex-col items-center justify-center text-center opacity-60 min-h-[220px]">
-                <span className="text-3xl mb-2">🥉</span>
-                <span className="text-label-caps text-on-surface-variant uppercase text-[11px]">Đang chờ Quý Quân</span>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
@@ -492,18 +334,19 @@ export function DashboardLeaderboard({
           <table className="w-full text-left text-body-sm">
             <thead>
               <tr className="border-b border-white/10 text-label-kicker text-on-surface-variant uppercase bg-surface-container/50">
-                <th className="py-2.5 px-3 sm:px-4 text-center w-14 sm:w-16">Hạng</th>
+                <th className="py-2.5 px-3 sm:px-4 text-center w-16 sm:w-20">Hạng</th>
                 <th className="py-2.5 px-3 sm:px-4">Thầy Cô / Đội Thi</th>
                 <th className="py-2.5 px-3 sm:px-4 text-center hidden sm:table-cell">Chế độ</th>
                 <th className="py-2.5 px-3 sm:px-4 text-center">Số câu đúng</th>
                 <th className="py-2.5 px-3 sm:px-4 text-center">Thời gian</th>
+                <th className="py-2.5 px-3 sm:px-4 text-center hidden md:table-cell">Chuỗi thắng</th>
                 <th className="py-2.5 px-3 sm:px-4 text-right">Điểm số</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {sortedList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-on-surface-variant text-body-sm">
+                  <td colSpan={7} className="text-center py-8 text-on-surface-variant text-body-sm">
                     Chưa có lượt chơi nào. Kết quả sẽ tự động hiển thị sau khi người chơi đầu tiên hoàn thành trận đấu!
                   </td>
                 </tr>
@@ -518,25 +361,38 @@ export function DashboardLeaderboard({
                       className={`transition-colors ${
                         isCurrent
                           ? 'bg-tertiary/15 font-bold border-l-4 border-l-tertiary'
-                          : rank <= 3
-                          ? 'hover:bg-surface-container-high/50'
+                          : rank === 1
+                          ? 'bg-amber-500/10 hover:bg-amber-500/20'
+                          : rank === 2
+                          ? 'bg-slate-300/10 hover:bg-slate-300/20'
+                          : rank === 3
+                          ? 'bg-amber-700/10 hover:bg-amber-700/20'
                           : 'hover:bg-surface-container/30'
                       }`}
                     >
                       {/* Cột Hạng */}
                       <td className="py-2.5 px-3 sm:px-4 text-center">
                         {rank === 1 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-400 text-amber-950 font-black text-sm shadow">
-                            🥇
-                          </span>
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-200 text-amber-950 font-black text-sm shadow">
+                              🥇
+                            </span>
+                            <span className="text-[9px] font-black uppercase text-amber-400 tracking-wider">Top 1</span>
+                          </div>
                         ) : rank === 2 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-200 text-slate-900 font-black text-sm shadow">
-                            🥈
-                          </span>
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-slate-200 to-slate-400 text-slate-900 font-black text-sm shadow">
+                              🥈
+                            </span>
+                            <span className="text-[9px] font-black uppercase text-slate-300 tracking-wider">Top 2</span>
+                          </div>
                         ) : rank === 3 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700 text-amber-100 font-black text-sm shadow">
-                            🥉
-                          </span>
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-amber-600 to-amber-800 text-amber-100 font-black text-sm shadow">
+                              🥉
+                            </span>
+                            <span className="text-[9px] font-black uppercase text-amber-500 tracking-wider">Top 3</span>
+                          </div>
                         ) : (
                           <span className="text-on-surface-variant font-mono font-bold">
                             #{rank}
@@ -548,9 +404,26 @@ export function DashboardLeaderboard({
                       <td className="py-2.5 px-3 sm:px-4">
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col">
-                            <span className={`font-bold ${isCurrent ? 'text-tertiary' : 'text-on-surface'}`}>
-                              {entry.name}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-bold ${isCurrent ? 'text-tertiary' : rank === 1 ? 'text-amber-300' : 'text-on-surface'}`}>
+                                {entry.name}
+                              </span>
+                              {rank === 1 && (
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-400/25 text-amber-300 border border-amber-400/40">
+                                  QUÁN QUÂN
+                                </span>
+                              )}
+                              {rank === 2 && (
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-slate-300/25 text-slate-200 border border-slate-300/40">
+                                  Á QUÂN
+                                </span>
+                              )}
+                              {rank === 3 && (
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-700/25 text-amber-300 border border-amber-600/40">
+                                  QUÝ QUÂN
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[10px] sm:text-body-xs text-on-surface-variant">
                               {entry.schoolOrRole}
                             </span>
@@ -594,6 +467,11 @@ export function DashboardLeaderboard({
                       {/* Cột Thời gian */}
                       <td className="py-2.5 px-3 sm:px-4 text-center font-mono font-bold text-amber-300">
                         {entry.totalDurationSec}s
+                      </td>
+
+                      {/* Cột Chuỗi thắng */}
+                      <td className="py-2.5 px-3 sm:px-4 text-center font-mono text-[11px] text-emerald-400 font-bold hidden md:table-cell">
+                        {entry.maxWinStreak > 0 ? `🔥 x${entry.maxWinStreak}` : '—'}
                       </td>
 
                       {/* Cột Điểm số */}

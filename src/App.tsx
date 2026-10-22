@@ -9,6 +9,20 @@ import { audio } from './utils/audio';
 export type PageStep = 'gioi-thieu' | 'huong-dan' | 'tro-choi-keo-co' | 'tong-ket';
 export type ControlMode = 'ar' | 'mouse';
 
+export interface AnswerRecord {
+  questionId: number;
+  questionIndex: number;
+  question: string;
+  topic: string;
+  userChoice: 'LEFT' | 'RIGHT' | null;
+  userChoiceText: string;
+  correctSide: 'LEFT' | 'RIGHT';
+  correctSideText: string;
+  isCorrect: boolean;
+  insight: string;
+  timeSpentSec?: number;
+}
+
 export interface MatchStats {
   humanScore: number;
   aiScore: number;
@@ -20,6 +34,7 @@ export interface MatchStats {
   totalDurationSec: number;
   controlMode?: ControlMode;
   sessionId?: string;
+  answers?: AnswerRecord[];
 }
 
 const INITIAL_STATS: MatchStats = {
@@ -33,14 +48,38 @@ const INITIAL_STATS: MatchStats = {
   totalDurationSec: 38.5,
   controlMode: 'ar',
   sessionId: 'initial-stats',
+  answers: TUG_QUESTIONS.map((q, idx) => {
+    const isCorrect = idx !== 2 && idx !== 6;
+    const userChoice = (isCorrect ? (q.hasAI ? 'RIGHT' : 'LEFT') : (q.hasAI ? 'LEFT' : 'RIGHT')) as 'LEFT' | 'RIGHT';
+    return {
+      questionId: q.id,
+      questionIndex: idx + 1,
+      question: q.question,
+      topic: q.topic,
+      userChoice,
+      userChoiceText: userChoice === 'RIGHT' ? 'Có sử dụng AI' : 'Không có AI',
+      correctSide: (q.hasAI ? 'RIGHT' : 'LEFT') as 'LEFT' | 'RIGHT',
+      correctSideText: q.hasAI ? 'Có sử dụng AI' : 'Không có AI',
+      isCorrect,
+      insight: q.insight,
+      timeSpentSec: +(3.2 + (idx % 3) * 0.7).toFixed(1),
+    };
+  }),
 };
 
 const BRIDGE_LABELS: Record<PageStep, string> = {
   'gioi-thieu': '01 • KHỞI ĐỘNG CHUYÊN ĐỀ 12 TIẾT AI',
   'huong-dan': '02 • QUY TẮC & CHỌN CHẾ ĐỘ ĐIỀU KHIỂN',
   'tro-choi-keo-co': '03 • ĐẤU TRƯỜNG KÉO CO CON NGƯỜI VS AI',
-  'tong-ket': '04 • TỔNG KẾT & GÓC SUY NGẪM SƯ PHẠM',
+  'tong-ket': '04 • TỔNG KẾT & THỐNG KÊ CHI TIẾT',
 };
+
+const NAV_STEPS = [
+  { id: 'gioi-thieu', num: '01', icon: 'flag', label: 'Giới thiệu', sub: 'Khởi động 12 tiết' },
+  { id: 'huong-dan', num: '02', icon: 'menu_book', label: 'Hướng dẫn', sub: 'Luật chơi & Thử AR' },
+  { id: 'tro-choi-keo-co', num: '03', icon: 'sports_kabaddi', label: 'Kéo co AI', sub: 'Người vs AI' },
+  { id: 'tong-ket', num: '04', icon: 'emoji_events', label: 'Tổng kết', sub: 'Dashboard & Thống kê' },
+] as const;
 
 function PinchMark({ live }: { live?: boolean }) {
   return <span className={`pinch ${live ? 'pinch-live' : ''}`} aria-hidden="true" />;
@@ -53,6 +92,7 @@ export default function App() {
   const [matchStats, setMatchStats] = useState<MatchStats>(INITIAL_STATS);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [gameSessionId, setGameSessionId] = useState(1);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   // Quản lý khóa các bước theo tuần tự (Mục 3 và Mục 4 ban đầu bị khóa)
   const [unlockedSteps, setUnlockedSteps] = useState<Record<PageStep, boolean>>({
@@ -228,7 +268,7 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER CHUNG 4 TRANG (TỐI ƯU MOBILE FIRST: GỌN NHẸ, HẠN CHẾ CHIẾM DIỆN TÍCH) */}
+      {/* HEADER CHUNG 4 TRANG (TỐI ƯU GỌN GÀNG, CHUYỂN NAV XUỐNG SIDEBAR PHẢI) */}
       <header className="fixed top-0 w-full z-50 bg-surface-container-lowest/85 backdrop-blur-xl shadow-[0_2px_16px_rgba(0,0,0,0.35)] border-b border-white/10">
         <div className="h-14 sm:h-16 max-w-7xl mx-auto px-2.5 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
           <button
@@ -249,67 +289,20 @@ export default function App() {
             />
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className="text-label-caps text-tertiary uppercase text-[10px] sm:text-[11px]">12 TIẾT AI</span>
+                <span className="text-label-caps text-tertiary uppercase text-[10px] sm:text-[11px] font-bold">12 TIẾT AI</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
               </div>
-              <span className="text-label-kicker text-on-surface-variant uppercase hidden md:inline text-[9px]">
-                AI TUG OF WAR • MANABIE
+              <span className="text-label-kicker text-on-surface-variant uppercase text-[9px] sm:text-[10px]">
+                Manabie Public School 2026
               </span>
             </div>
           </button>
 
-          {/* THANH ĐIỀU HƯỚNG 4 BƯỚC */}
-          <nav className="flex items-center bg-surface-container-high/75 backdrop-blur-md rounded-xl p-0.5 sm:p-1 gap-0.5 sm:gap-1 border border-white/10">
-            {(
-              [
-                { id: 'gioi-thieu', num: '01', label: 'Giới thiệu' },
-                { id: 'huong-dan', num: '02', label: 'Hướng dẫn' },
-                { id: 'tro-choi-keo-co', num: '03', label: 'Đấu trường Kéo co' },
-                { id: 'tong-ket', num: '04', label: 'Tổng kết' },
-              ] as { id: PageStep; num: string; label: string }[]
-            ).map((tab) => {
-              const active = page === tab.id;
-              // Khi đã từ mục 2 qua mục 3, không cho bấm về các mục trước đó (mục 1 và mục 2)
-              const isPastStepLocked = page === 'tro-choi-keo-co' && (tab.id === 'gioi-thieu' || tab.id === 'huong-dan');
-              const isLocked = !unlockedSteps[tab.id] || isPastStepLocked;
-
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  disabled={isLocked}
-                  onClick={() => {
-                    if (isLocked) return;
-                    triggerPageTransition(tab.id, {
-                      isLaunchGame: tab.id === 'tro-choi-keo-co' && page !== 'tro-choi-keo-co',
-                    });
-                  }}
-                  title={
-                    isPastStepLocked
-                      ? `Đang trong trận đấu. Bấm nút "Hướng dẫn" trên màn hình để xem lại luật chơi bất cứ lúc nào!`
-                      : isLocked
-                      ? `Mục ${tab.num} đang khóa. Vui lòng hoàn thành tuần tự các bước trước!`
-                      : tab.label
-                  }
-                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-all ${
-                    active
-                      ? 'bg-primary-container text-on-primary-container font-bold shadow-[0_0_14px_rgba(57,90,210,0.5)] cursor-default'
-                      : isLocked
-                      ? 'opacity-40 text-on-surface-variant cursor-not-allowed hover:bg-transparent'
-                      : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest cursor-pointer'
-                  }`}
-                >
-                  <span className="text-[11px] sm:text-label-caps opacity-90">{tab.num}</span>
-                  <span className="text-body-sm font-semibold hidden md:inline">{tab.label}</span>
-                  {isLocked && !active && (
-                    <span className="material-symbols-outlined text-[12px] sm:text-[14px] text-on-surface-variant/80">
-                      lock
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+          {/* CHỈ BÁO TIẾN TRÌNH Ở TRUNG TÂM HEADER */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high/60 border border-white/10 text-on-surface-variant text-[11px] font-semibold">
+            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
+            <span>{BRIDGE_LABELS[page]}</span>
+          </div>
 
           {/* NÚT TIỆN ÍCH PHẢI */}
           <div className="flex items-center gap-1 sm:gap-2">
@@ -348,12 +341,160 @@ export default function App() {
             >
               <span className="material-symbols-outlined text-[18px] sm:text-[20px]">fullscreen</span>
             </button>
+
+            {/* NÚT MỞ RỘNG / THU GỌN THANH ĐIỀU HƯỚNG BÊN PHẢI */}
+            <button
+              onClick={() => setSidebarExpanded((prev) => !prev)}
+              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all border cursor-pointer ${
+                sidebarExpanded
+                  ? 'bg-primary-container text-on-primary-container border-primary/50 shadow-sm'
+                  : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface border-white/10'
+              }`}
+              title={sidebarExpanded ? 'Thu gọn menu điều hướng bên phải' : 'Mở rộng menu điều hướng bên phải'}
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {sidebarExpanded ? 'dock_to_right' : 'view_sidebar'}
+              </span>
+              <span className="hidden sm:inline">{sidebarExpanded ? 'Thu gọn' : 'Menu'}</span>
+            </button>
           </div>
         </div>
       </header>
 
+      {/* THANH ĐIỀU HƯỚNG CỘT BÊN PHẢI (COLLAPSIBLE RIGHT SIDEBAR) */}
+      <aside
+        aria-label="Thanh điều hướng các bước"
+        className={`fixed right-2 sm:right-3 top-16 sm:top-20 z-40 transition-all duration-300 ease-in-out ${
+          sidebarExpanded
+            ? 'w-56 sm:w-64 bg-surface-container-lowest/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.65)] p-3'
+            : 'w-12 sm:w-14 bg-surface-container-lowest/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-1.5 sm:p-2'
+        }`}
+      >
+        {/* Header của Sidebar: Nút phóng to / thu gọn */}
+        <div
+          className={`flex items-center ${
+            sidebarExpanded ? 'justify-between pb-2 mb-2 border-b border-white/10' : 'justify-center pb-1 mb-1'
+          }`}
+        >
+          {sidebarExpanded && (
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px] text-tertiary">alt_route</span>
+              <span className="text-[10px] font-black uppercase text-on-surface-variant tracking-wider">
+                TIẾN TRÌNH 4 BƯỚC
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-surface-container-high/80 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            title={sidebarExpanded ? 'Thu gọn về dạng icon' : 'Phóng to xem đầy đủ các bước'}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {sidebarExpanded ? 'chevron_right' : 'chevron_left'}
+            </span>
+          </button>
+        </div>
+
+        {/* Danh sách 4 bước */}
+        <nav className="flex flex-col gap-1.5">
+          {NAV_STEPS.map((tab) => {
+            const active = page === tab.id;
+            const isPastStepLocked =
+              page === 'tro-choi-keo-co' && (tab.id === 'gioi-thieu' || tab.id === 'huong-dan');
+            const isLocked = !unlockedSteps[tab.id] || isPastStepLocked;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                disabled={isLocked}
+                onClick={() => {
+                  if (isLocked) return;
+                  triggerPageTransition(tab.id, {
+                    isLaunchGame: tab.id === 'tro-choi-keo-co' && page !== 'tro-choi-keo-co',
+                  });
+                }}
+                title={
+                  isPastStepLocked
+                    ? `Đang trong trận đấu kéo co. Dùng nút "Hướng dẫn" trên màn hình để xem lại!`
+                    : isLocked
+                    ? `Mục ${tab.num} đang khóa. Vui lòng hoàn thành tuần tự!`
+                    : `${tab.num} • ${tab.label}`
+                }
+                className={`group relative flex items-center rounded-xl transition-all ${
+                  sidebarExpanded ? 'px-2.5 py-2 gap-2.5 text-left' : 'w-full aspect-square justify-center'
+                } ${
+                  active
+                    ? 'bg-gradient-to-r from-primary-container to-primary-container/80 text-on-primary-container font-black shadow-[0_0_16px_rgba(57,90,210,0.5)] border border-primary/40'
+                    : isLocked
+                    ? 'opacity-35 text-on-surface-variant cursor-not-allowed hover:bg-transparent'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/80 cursor-pointer border border-transparent hover:border-white/10'
+                }`}
+              >
+                {/* Icon hoặc Số */}
+                <div className="relative shrink-0 flex items-center justify-center">
+                  <span
+                    className={`font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+                      active
+                        ? 'bg-primary text-on-primary'
+                        : 'bg-surface-container text-on-surface-variant group-hover:text-tertiary'
+                    }`}
+                  >
+                    {tab.num}
+                  </span>
+                  {active && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-tertiary animate-ping" />
+                  )}
+                </div>
+
+                {/* Khi phóng to: hiển thị chi tiết tên bước & mô tả ngắn */}
+                {sidebarExpanded && (
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[12px] font-bold truncate leading-tight">
+                      {tab.label}
+                    </span>
+                    <span className="text-[9.5px] text-on-surface-variant/80 truncate">
+                      {tab.sub}
+                    </span>
+                  </div>
+                )}
+
+                {/* Biểu tượng ổ khóa nếu bị khóa */}
+                {isLocked && !active && (
+                  <span
+                    className={`material-symbols-outlined text-[14px] text-on-surface-variant/70 shrink-0 ${
+                      sidebarExpanded ? 'ml-auto' : 'absolute bottom-1 right-1 text-[11px]'
+                    }`}
+                  >
+                    lock
+                  </span>
+                )}
+
+                {/* Tooltip khi thu gọn ở dạng icon */}
+                {!sidebarExpanded && (
+                  <div className="absolute right-full mr-2 px-2.5 py-1 bg-surface-container-lowest/95 text-on-surface text-[11px] font-bold rounded-lg border border-white/15 shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                    {tab.num} • {tab.label}
+                    {isLocked && ' 🔒 (Đang khóa)'}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Chân sidebar khi mở rộng */}
+        {sidebarExpanded && (
+          <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-on-surface-variant">
+            <span>Chế độ: <strong>{controlMode === 'ar' ? 'Camera AR' : 'Chuột'}</strong></span>
+            <span className="text-tertiary font-bold">12 Tiết AI</span>
+          </div>
+        )}
+      </aside>
+
       {/* NỘI DUNG TỪNG TRANG VỚI KỸ THUẬT STAGGER & MORPH */}
-      <main key={motionKey} className="w-full pt-16 sm:pt-18 pb-2 sm:pb-5 flex-1 flex flex-col justify-center">
+      <main key={motionKey} className="w-full pt-16 sm:pt-18 pb-2 sm:pb-5 flex-1 flex flex-col justify-center pr-12 sm:pr-14 md:pr-16">
         <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6">
           {page === 'gioi-thieu' && (
             <WelcomePage
@@ -1003,6 +1144,7 @@ function GameplayPage({
   const questionStartRef = useRef<number>(performance.now());
   const matchStartRef = useRef<number>(performance.now());
   const reactionTimesRef = useRef<number[]>([]);
+  const answeredListRef = useRef<AnswerRecord[]>([]);
 
   const currentQ = questions[qIndex] ?? questions[0];
   const isArMode = controlMode === 'ar';
@@ -1086,6 +1228,29 @@ function GameplayPage({
     // RIGHT = CÓ SỬ DỤNG AI (hasAI === true)
     const chosenHasAI = choiceSide === 'RIGHT';
     const isCorrect = choiceSide !== null && chosenHasAI === currentQ.hasAI;
+
+    // Ghi nhận lịch sử câu hỏi phục vụ thống kê chi tiết sau trận đấu
+    const userChoiceText =
+      choiceSide === 'LEFT'
+        ? 'Không có AI'
+        : choiceSide === 'RIGHT'
+        ? 'Có sử dụng AI'
+        : 'Hết giờ (Không chọn)';
+    const correctSideText = currentQ.hasAI ? 'Có sử dụng AI' : 'Không có AI';
+
+    answeredListRef.current.push({
+      questionId: currentQ.id,
+      questionIndex: qIndex + 1,
+      question: currentQ.question,
+      topic: currentQ.topic,
+      userChoice: choiceSide,
+      userChoiceText,
+      correctSide: currentQ.hasAI ? 'RIGHT' : 'LEFT',
+      correctSideText,
+      isCorrect,
+      insight: currentQ.insight,
+      timeSpentSec: +elapsedSec.toFixed(1),
+    });
 
     const sourceLabel =
       source === 'hand'
@@ -1211,6 +1376,7 @@ function GameplayPage({
         totalDurationSec: matchElapsed,
         controlMode,
         sessionId: 'session-' + Date.now(),
+        answers: answeredListRef.current,
       });
     }
   };
@@ -1877,13 +2043,47 @@ function SummaryPage({
   onHome: () => void;
 }) {
   const [victoryPopupOpen, setVictoryPopupOpen] = useState(true);
-  const [summaryTab, setSummaryTab] = useState<'dashboard' | 'reflection'>('dashboard');
+  const [summaryTab, setSummaryTab] = useState<'dashboard' | 'review'>('dashboard');
+  const [filterMode, setFilterMode] = useState<'all' | 'correct' | 'wrong'>('all');
   const accuracy = Math.round((stats.correctCount / Math.max(1, stats.totalQuestions)) * 100);
   const humanWon = stats.humanScore >= stats.aiScore;
   const barWidth = Math.max(25, Math.min(85, Math.round(50 + (stats.ropeMeters / 8) * 35)));
 
+  // Danh sách các câu hỏi đã làm (lấy từ lượt đấu thực hoặc câu hỏi mẫu ban đầu)
+  const answersList: AnswerRecord[] =
+    stats.answers && stats.answers.length > 0
+      ? stats.answers
+      : TUG_QUESTIONS.map((q, idx) => {
+          const isCorrect = idx !== 2 && idx !== 6;
+          const userChoice = (isCorrect
+            ? (q.hasAI ? 'RIGHT' : 'LEFT')
+            : (q.hasAI ? 'LEFT' : 'RIGHT')) as 'LEFT' | 'RIGHT';
+          return {
+            questionId: q.id,
+            questionIndex: idx + 1,
+            question: q.question,
+            topic: q.topic,
+            userChoice,
+            userChoiceText: userChoice === 'RIGHT' ? 'Có sử dụng AI' : 'Không có AI',
+            correctSide: (q.hasAI ? 'RIGHT' : 'LEFT') as 'LEFT' | 'RIGHT',
+            correctSideText: q.hasAI ? 'Có sử dụng AI' : 'Không có AI',
+            isCorrect,
+            insight: q.insight,
+            timeSpentSec: +(3.2 + (idx % 3) * 0.7).toFixed(1),
+          };
+        });
+
+  const filteredAnswers = answersList.filter((a) => {
+    if (filterMode === 'correct') return a.isCorrect;
+    if (filterMode === 'wrong') return !a.isCorrect;
+    return true;
+  });
+
+  const correctCount = answersList.filter((a) => a.isCorrect).length;
+  const wrongCount = answersList.length - correctCount;
+
   return (
-    <div className="flex flex-col w-full gap-3.5 sm:gap-5 relative ppt-page-enter">
+    <div className="flex flex-col w-full gap-3.5 sm:gap-4 relative ppt-page-enter">
       {/* POPUP KẾT QUẢ TRẬN ĐẤU HIỆN LÊN NGAY KHI KẾT THÚC TRÒ CHƠI */}
       {victoryPopupOpen && (
         <div
@@ -1941,7 +2141,7 @@ function SummaryPage({
               </div>
             </div>
 
-            {/* Nút đóng Popup để xem Dashboard hoặc Góc suy ngẫm */}
+            {/* Nút đóng Popup để xem Dashboard hoặc Thống kê câu hỏi */}
             <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
               <button
                 type="button"
@@ -1955,13 +2155,13 @@ function SummaryPage({
                 type="button"
                 onClick={() => {
                   audio.playClick();
-                  setSummaryTab('reflection');
+                  setSummaryTab('review');
                   setVictoryPopupOpen(false);
                 }}
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-body-sm sm:text-body-base font-bold transition-colors cursor-pointer border border-white/10 flex items-center justify-center gap-1.5"
               >
-                <span className="material-symbols-outlined text-[18px]">psychology</span>
-                <span>Góc suy ngẫm</span>
+                <span className="material-symbols-outlined text-[18px]">fact_check</span>
+                <span>Xem Thống kê câu hỏi</span>
               </button>
               <button
                 type="button"
@@ -1980,16 +2180,16 @@ function SummaryPage({
         </div>
       )}
 
-      {/* THANH ĐIỀU HƯỚNG TỔNG KẾT VỚI TAB DASHBOARD & GÓC SUY NGẪM */}
+      {/* THANH ĐIỀU HƯỚNG TỔNG KẾT VỚI TAB DASHBOARD & THỐNG KÊ CHI TIẾT */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 bg-surface-container-low/85 backdrop-blur-xl px-3 sm:px-4 py-2 rounded-xl shadow-md border border-white/10 ppt-stagger-1">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary text-[9.5px] sm:text-label-kicker uppercase font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-            BƯỚC 04 / 04 • TỔNG KẾT
+            BƯỚC 04 / 04 • TỔNG KẾT & THỐNG KÊ
           </span>
         </div>
 
-        {/* 2 TAB CHUYỂN ĐỔI: DASHBOARD GOLIVE & GÓC SUY NGẪM */}
+        {/* 2 TAB CHUYỂN ĐỔI: DASHBOARD GOLIVE & THỐNG KÊ CHI TIẾT CÂU HỎI */}
         <div className="flex items-center bg-surface-container-high/90 rounded-xl p-1 gap-1 border border-white/10">
           <button
             type="button"
@@ -2011,16 +2211,16 @@ function SummaryPage({
             type="button"
             onClick={() => {
               audio.playClick();
-              setSummaryTab('reflection');
+              setSummaryTab('review');
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-body-sm font-bold transition-all cursor-pointer ${
-              summaryTab === 'reflection'
+              summaryTab === 'review'
                 ? 'bg-primary-container text-on-primary-container shadow-[0_0_15px_rgba(57,90,210,0.4)]'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest'
             }`}
           >
-            <span className="material-symbols-outlined text-[17px]">psychology</span>
-            <span className="text-[11px] sm:text-body-sm">GÓC SUY NGẪM SƯ PHẠM</span>
+            <span className="material-symbols-outlined text-[17px]">fact_check</span>
+            <span className="text-[11px] sm:text-body-sm">THỐNG KÊ CHI TIẾT CÂU HỎI</span>
           </button>
         </div>
 
@@ -2034,51 +2234,14 @@ function SummaryPage({
         </button>
       </div>
 
-      {/* 4 Thẻ chỉ số gọn gàng (bao gồm Thời gian hoàn thành & Số câu đúng) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 ppt-stagger-2">
-        <div className="lux-card bg-surface-container/90 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-md border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-tertiary" />
-          <span className="text-[9.5px] sm:text-label-kicker text-on-surface-variant uppercase">ĐỘI CON NGƯỜI</span>
-          <div className="text-metric-display text-tertiary my-1">{stats.humanScore} PTS</div>
-          <span className="text-[10px] sm:text-label-caps text-tertiary">
-            LỰC KÉO {stats.ropeMeters >= 0 ? `+${stats.ropeMeters}M` : `${stats.ropeMeters}M`}
-          </span>
-        </div>
-
-        <div className="lux-card bg-surface-container/90 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-md border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-secondary" />
-          <span className="text-[9.5px] sm:text-label-kicker text-on-surface-variant uppercase">ĐỘI AI BOTS</span>
-          <div className="text-metric-display text-secondary my-1">{stats.aiScore} PTS</div>
-          <span className="text-[10px] sm:text-label-caps text-on-surface-variant">ĐIỂM MÔ PHỎNG</span>
-        </div>
-
-        <div className="lux-card bg-surface-container/90 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-md border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
-          <span className="text-[9.5px] sm:text-label-kicker text-on-surface-variant uppercase">ĐỘ CHÍNH XÁC</span>
-          <div className="text-metric-display text-primary my-1">{accuracy}%</div>
-          <span className="text-[10px] sm:text-label-caps text-on-surface-variant">
-            {stats.correctCount} / {stats.totalQuestions} CÂU ĐÚNG
-          </span>
-        </div>
-
-        <div className="lux-card bg-surface-container/90 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-md border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-400" />
-          <span className="text-[9.5px] sm:text-label-kicker text-on-surface-variant uppercase">THỜI GIAN HOÀN THÀNH</span>
-          <div className="text-metric-display text-amber-300 font-mono my-1">⏱️ {stats.totalDurationSec || 40.0}s</div>
-          <span className="text-[10px] sm:text-label-caps text-emerald-400 font-bold">
-            🔥 CHUỖI THẮNG x{stats.maxWinStreak} • {stats.avgReactionSec}s/câu
-          </span>
-        </div>
-      </div>
-
       {/* NỘI DUNG CHÍNH THEO TAB ĐÃ CHỌN */}
       {summaryTab === 'dashboard' ? (
-        <div className="flex flex-col gap-4 w-full">
-          {/* COMPONENT DASHBOARD & BẢNG VINH DANH TOP 1-2-3 */}
+        <div className="flex flex-col gap-3.5 w-full">
+          {/* COMPONENT DASHBOARD & BẢNG VINH DANH TOP 1-2-3 (ĐÃ LƯỢC BỎ CÁC BỤC TO) */}
           <DashboardLeaderboard currentStats={stats} />
 
           {/* Nút hành động chân trang */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-surface-container-low/90 border border-white/10 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-surface-container-low/90 border border-white/10 shadow-lg">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -2103,100 +2266,255 @@ function SummaryPage({
               type="button"
               onClick={() => {
                 audio.playClick();
-                setSummaryTab('reflection');
+                setSummaryTab('review');
               }}
               className="text-tertiary hover:underline text-body-sm font-bold flex items-center gap-1 cursor-pointer"
             >
-              <span>Xem Góc suy ngẫm sư phạm</span>
+              <span>Xem Thống kê chi tiết từng câu hỏi</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-4 w-full">
-          {/* Khối trung tâm: Mascot + Góc Suy Ngẫm Sư Phạm */}
-          <div className="rounded-xl sm:rounded-2xl bg-surface-container-low/95 p-3.5 sm:p-5 shadow-2xl relative overflow-hidden border border-white/10 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5 items-center ppt-stagger-3">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-tertiary via-primary-container to-tertiary" />
-
-            {/* Cột Mascot */}
-            <div className="lg:col-span-4 flex flex-row lg:flex-col items-center justify-center text-center gap-2.5">
-              <div className="relative w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center shrink-0">
-                <div className="absolute inset-0 bg-tertiary/20 rounded-full blur-xl animate-pulse" />
-                <img
-                  alt="Mana mascot"
-                  className="w-full h-full object-contain relative z-10 drop-shadow-[0_8px_18px_rgba(0,0,0,0.5)] ppt-mascot-enter"
-                  src={BRAND_MASCOTS.welcomeAnimated}
-                />
-              </div>
-              <span className="text-[10px] sm:text-label-caps text-tertiary uppercase font-bold">
-                THẦY CÔ LÀM CHỦ • AI TRỢ LỰC
+        <div className="flex flex-col gap-3.5 w-full ppt-stagger-2">
+          {/* THANH THỐNG KÊ CHỈ SỐ GỌN GÀNG (ĐÃ THAY THẾ CÁC KHỐI TO TRƯỚC ĐÂY) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 p-3 rounded-2xl bg-surface-container-low/95 border border-white/10 shadow-lg">
+            <div className="flex flex-col p-2.5 rounded-xl bg-surface-container/60 border border-white/5">
+              <span className="text-[9.5px] uppercase text-on-surface-variant font-bold">Điểm Con Người</span>
+              <span className="text-headline-sm font-black text-tertiary font-mono">{stats.humanScore} pts</span>
+              <span className="text-[10px] text-tertiary">
+                Kéo dây: {stats.ropeMeters >= 0 ? `+${stats.ropeMeters}m` : `${stats.ropeMeters}m`}
               </span>
             </div>
 
-            {/* Cột Thông điệp cốt lõi */}
-            <div className="lg:col-span-8 flex flex-col gap-2.5 sm:gap-3">
+            <div className="flex flex-col p-2.5 rounded-xl bg-surface-container/60 border border-white/5">
+              <span className="text-[9.5px] uppercase text-on-surface-variant font-bold">Điểm AI Bots</span>
+              <span className="text-headline-sm font-black text-secondary font-mono">{stats.aiScore} pts</span>
+              <span className="text-[10px] text-on-surface-variant">Mô phỏng 12 tiết</span>
+            </div>
+
+            <div className="flex flex-col p-2.5 rounded-xl bg-surface-container/60 border border-white/5">
+              <span className="text-[9.5px] uppercase text-on-surface-variant font-bold">Độ chính xác</span>
+              <span className="text-headline-sm font-black text-primary font-mono">{accuracy}%</span>
+              <span className="text-[10px] text-on-surface-variant">
+                {stats.correctCount} / {stats.totalQuestions} câu đúng
+              </span>
+            </div>
+
+            <div className="flex flex-col p-2.5 rounded-xl bg-surface-container/60 border border-white/5">
+              <span className="text-[9.5px] uppercase text-on-surface-variant font-bold">Thời gian hoàn thành</span>
+              <span className="text-headline-sm font-black text-amber-300 font-mono">{stats.totalDurationSec || 40.0}s</span>
+              <span className="text-[10px] text-on-surface-variant">TB: {stats.avgReactionSec}s / câu</span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 flex flex-col p-2.5 rounded-xl bg-surface-container/60 border border-white/5">
+              <span className="text-[9.5px] uppercase text-on-surface-variant font-bold">Chuỗi thắng tối đa</span>
+              <span className="text-headline-sm font-black text-emerald-400 font-mono">🔥 x{stats.maxWinStreak}</span>
+              <span className="text-[10px] text-emerald-400 font-semibold">Streak bứt phá</span>
+            </div>
+          </div>
+
+          {/* BANNER ĐỊNH HƯỚNG SƯ PHẠM MANABIE */}
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-surface-container-high/90 via-surface-container to-surface-container-lowest border border-tertiary/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">psychology</span>
+              </div>
               <div>
-                <div className="flex items-center gap-1.5 mb-1 text-tertiary">
-                  <span className="material-symbols-outlined text-[18px]">psychology</span>
-                  <span className="text-[10px] sm:text-label-caps uppercase font-bold">GÓC SUY NGẪM SƯ PHẠM</span>
-                </div>
-                <blockquote className="text-sm sm:text-headline-sm text-on-surface pl-3 relative leading-snug font-bold">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-tertiary rounded-full" />
-                  “Điều gì giúp chúng ta xác định khi nào AI có thể hỗ trợ con người hiệu quả nhất trong lớp học?”
-                </blockquote>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
-                <div className="p-2.5 sm:p-3 rounded-lg bg-surface-container/80 border border-white/5">
-                  <span className="text-[10px] sm:text-label-caps text-tertiary uppercase block mb-0.5 font-bold">
-                    1. Ranh giới Tự Động Hóa vs AI
-                  </span>
-                  <p className="text-xs sm:text-body-sm text-on-surface-variant leading-snug">
-                    Sử dụng AI để gợi ý học liệu, phân tích dữ liệu; giữ sự thấu cảm và quyết định sư phạm cho giáo viên.
-                  </p>
-                </div>
-                <div className="p-2.5 sm:p-3 rounded-lg bg-surface-container/80 border border-white/5">
-                  <span className="text-[10px] sm:text-label-caps text-secondary uppercase block mb-0.5 font-bold">
-                    2. Rèn Tư Duy Phản Biện
-                  </span>
-                  <p className="text-xs sm:text-body-sm text-on-surface-variant leading-snug">
-                    Hướng dẫn học sinh luôn kiểm chứng đầu ra của AI và làm chủ công nghệ trong 12 tiết học cốt lõi.
-                  </p>
-                </div>
-              </div>
-
-              {/* Nút thao tác */}
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={onReplay}
-                  className="pinch-host inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] font-black text-body-sm sm:text-headline-sm hover:brightness-110 shadow-[0_6px_20px_rgba(23,219,229,0.35)] transition-all cursor-pointer"
-                >
-                  <PinchMark live />
-                  <span>CHƠI LẠI TRẬN MỚI</span>
-                  <span className="material-symbols-outlined text-[18px] sm:text-[20px]">replay</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onHome}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-3 rounded-xl bg-surface-container-high text-on-surface text-body-sm sm:text-headline-sm hover:bg-surface-container-highest transition-all border border-white/10 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">home</span>
-                  <span>Về trang chủ</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    audio.playClick();
-                    setSummaryTab('dashboard');
-                  }}
-                  className="text-tertiary hover:underline text-body-sm font-bold flex items-center gap-1 cursor-pointer ml-auto"
-                >
-                  <span className="material-symbols-outlined text-[16px]">leaderboard</span>
-                  <span>Xem Bảng xếp hạng Dashboard</span>
-                </button>
+                <span className="text-[10px] font-black uppercase text-tertiary tracking-wider block">
+                  BẢNG THỐNG KÊ CHI TIẾT & ĐÁNH GIÁ SƯ PHẠM
+                </span>
+                <p className="text-xs sm:text-body-sm text-on-surface font-semibold">
+                  Xem lại chi tiết từng tình huống đã trả lời để đối chiếu cách ứng dụng AI và phân tích sư phạm trong lớp học.
+                </p>
               </div>
             </div>
+
+            {/* BỘ LỌC CÂU HỎI */}
+            <div className="flex items-center bg-surface-container-lowest/90 rounded-lg p-0.5 border border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => setFilterMode('all')}
+                className={`px-2.5 py-1 rounded text-body-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'all'
+                    ? 'bg-surface-container-highest text-on-surface shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Tất cả ({answersList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterMode('correct')}
+                className={`px-2.5 py-1 rounded text-body-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'correct'
+                    ? 'bg-emerald-500/25 text-emerald-300 shadow-sm'
+                    : 'text-on-surface-variant hover:text-emerald-300'
+                }`}
+              >
+                ✅ Đúng ({correctCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterMode('wrong')}
+                className={`px-2.5 py-1 rounded text-body-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'wrong'
+                    ? 'bg-rose-500/25 text-rose-300 shadow-sm'
+                    : 'text-on-surface-variant hover:text-rose-300'
+                }`}
+              >
+                ❌ Chưa đúng ({wrongCount})
+              </button>
+            </div>
+          </div>
+
+          {/* DANH SÁCH CHI TIẾT TỪNG CÂU HỎI */}
+          <div className="flex flex-col gap-3">
+            {filteredAnswers.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-surface-container-low/70 border border-white/10 text-on-surface-variant">
+                Không tìm thấy câu hỏi phù hợp với bộ lọc đã chọn.
+              </div>
+            ) : (
+              filteredAnswers.map((ans) => {
+                const isTimeout = ans.userChoice === null;
+                return (
+                  <div
+                    key={ans.questionId}
+                    className={`rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border transition-all ${
+                      ans.isCorrect
+                        ? 'bg-emerald-950/15 border-emerald-500/35 shadow-[0_4px_16px_rgba(16,185,129,0.08)]'
+                        : isTimeout
+                        ? 'bg-amber-950/15 border-amber-500/35 shadow-[0_4px_16px_rgba(245,158,11,0.08)]'
+                        : 'bg-rose-950/15 border-rose-500/35 shadow-[0_4px_16px_rgba(244,63,94,0.08)]'
+                    }`}
+                  >
+                    {/* Header Thẻ Câu Hỏi */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-surface-container-high text-tertiary border border-white/10">
+                          CÂU {String(ans.questionIndex).padStart(2, '0')} / {String(stats.totalQuestions).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10.5px] sm:text-label-caps uppercase text-on-surface-variant tracking-wider font-bold">
+                          {ans.topic}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {ans.timeSpentSec && (
+                          <span className="text-[11px] font-mono text-on-surface-variant flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[13px]">timer</span>
+                            {ans.timeSpentSec}s
+                          </span>
+                        )}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-black uppercase tracking-wide ${
+                            ans.isCorrect
+                              ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/50'
+                              : isTimeout
+                              ? 'bg-amber-500/25 text-amber-300 border border-amber-400/50'
+                              : 'bg-rose-500/25 text-rose-300 border border-rose-400/50'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            {ans.isCorrect ? 'check_circle' : isTimeout ? 'schedule' : 'cancel'}
+                          </span>
+                          <span>
+                            {ans.isCorrect ? 'ĐÚNG (+150 PTS)' : isTimeout ? 'HẾT GIỜ (0 PTS)' : 'CHƯA ĐÚNG'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Nội dung câu hỏi */}
+                    <h4 className="text-body-sm sm:text-body-base font-bold text-on-surface mb-2.5 leading-snug">
+                      {ans.question}
+                    </h4>
+
+                    {/* So sánh Lựa chọn người chơi vs Đáp án chuẩn */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                      <div
+                        className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                          ans.isCorrect
+                            ? 'bg-emerald-500/10 border-emerald-500/30'
+                            : 'bg-rose-500/10 border-rose-500/30'
+                        }`}
+                      >
+                        <span className="text-[10.5px] uppercase text-on-surface-variant font-semibold">
+                          Lựa chọn của bạn:
+                        </span>
+                        <span
+                          className={`text-xs sm:text-body-sm font-black ${
+                            ans.isCorrect ? 'text-emerald-300' : 'text-rose-300'
+                          }`}
+                        >
+                          {ans.userChoiceText}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl border bg-tertiary/10 border-tertiary/30 flex items-center justify-between">
+                        <span className="text-[10.5px] uppercase text-on-surface-variant font-semibold">
+                          Đáp án chuẩn sư phạm:
+                        </span>
+                        <span className="text-xs sm:text-body-sm font-black text-tertiary flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[15px]">verified</span>
+                          {ans.correctSideText}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Giải thích sư phạm (Manabie Insight) */}
+                    <div className="p-2.5 sm:p-3 rounded-xl bg-surface-container-lowest/80 border border-white/10 flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="material-symbols-outlined text-[15px]">psychology</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-black uppercase text-tertiary tracking-wider">
+                          GIẢI THÍCH SƯ PHẠM (MANABIE INSIGHT):
+                        </span>
+                        <p className="text-xs sm:text-body-sm text-on-surface-variant leading-relaxed">
+                          {ans.insight}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Nút hành động chân trang của tab Thống kê */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-surface-container-low/90 border border-white/10 shadow-lg mt-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onReplay}
+                className="pinch-host inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] font-black text-body-sm sm:text-headline-sm hover:brightness-110 shadow-[0_6px_20px_rgba(23,219,229,0.35)] transition-all cursor-pointer"
+              >
+                <PinchMark live />
+                <span>CHƠI LẠI TRẬN MỚI</span>
+                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">replay</span>
+              </button>
+              <button
+                type="button"
+                onClick={onHome}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-3 rounded-xl bg-surface-container-high text-on-surface text-body-sm sm:text-headline-sm hover:bg-surface-container-highest transition-all border border-white/10 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">home</span>
+                <span>Về trang chủ</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                audio.playClick();
+                setSummaryTab('dashboard');
+              }}
+              className="text-tertiary hover:underline text-body-sm font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">leaderboard</span>
+              <span>Xem Bảng xếp hạng Dashboard Golive</span>
+            </button>
           </div>
         </div>
       )}
