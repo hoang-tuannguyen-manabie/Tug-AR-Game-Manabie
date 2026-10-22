@@ -14,6 +14,8 @@ export interface AnswerRecord {
   questionIndex: number;
   question: string;
   topic: string;
+  toolName?: string;
+  image?: string;
   userChoice: 'LEFT' | 'RIGHT' | null;
   userChoiceText: string;
   correctSide: 'LEFT' | 'RIGHT';
@@ -56,6 +58,8 @@ const INITIAL_STATS: MatchStats = {
       questionIndex: idx + 1,
       question: q.question,
       topic: q.topic,
+      toolName: q.toolName,
+      image: q.image,
       userChoice,
       userChoiceText: userChoice === 'RIGHT' ? 'Có sử dụng AI' : 'Không có AI',
       correctSide: (q.hasAI ? 'RIGHT' : 'LEFT') as 'LEFT' | 'RIGHT',
@@ -246,7 +250,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between relative selection:bg-primary selection:text-on-primary overflow-x-hidden">
+    <div
+      className={`min-h-screen flex flex-col justify-between relative selection:bg-primary selection:text-on-primary overflow-x-hidden ${
+        page !== 'tong-ket' ? 'h-screen max-h-screen overflow-hidden' : ''
+      }`}
+    >
       {/* LỚP NỀN ATMOSPHERE ĐỒNG BỘ REPO THAM CHIẾU */}
       <div className="workshop-atmosphere" aria-hidden="true">
         <span className="workshop-grid" />
@@ -268,134 +276,151 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER CHUNG 4 TRANG (TỐI ƯU GỌN GÀNG, CHUYỂN NAV XUỐNG SIDEBAR PHẢI) */}
-      <header className="fixed top-0 w-full z-50 bg-surface-container-lowest/85 backdrop-blur-xl shadow-[0_2px_16px_rgba(0,0,0,0.35)] border-b border-white/10">
-        <div className="h-14 sm:h-16 max-w-7xl mx-auto px-2.5 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+      {/* THANH ĐIỀU HƯỚNG CỘT BÊN PHẢI (COLLAPSIBLE RIGHT SIDEBAR - TÍCH HỢP TOÀN BỘ TIỆN ÍCH HEADER TỪ TRANG 1) */}
+      <aside
+        aria-label="Thanh điều hướng các bước"
+        className={`fixed right-2 sm:right-3 top-2 sm:top-3 z-40 transition-all duration-300 ease-in-out ${
+          sidebarExpanded
+            ? 'w-56 sm:w-64 bg-surface-container-lowest/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.65)] p-3'
+            : 'w-12 sm:w-14 bg-surface-container-lowest/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-1.5 sm:p-2'
+        }`}
+      >
+        {/* Header của Sidebar */}
+        <div
+          className={`flex items-center ${
+            sidebarExpanded
+              ? 'justify-between pb-2 mb-2 border-b border-white/10'
+              : 'flex-col items-center gap-1.5 pb-1.5 mb-1.5 border-b border-white/10'
+          }`}
+        >
+          {sidebarExpanded ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (page !== 'tro-choi-keo-co') {
+                  triggerPageTransition('gioi-thieu');
+                }
+              }}
+              className={`flex items-center gap-2 min-w-0 text-left group ${
+                page === 'tro-choi-keo-co' ? 'cursor-default' : 'cursor-pointer'
+              }`}
+              title="Manabie Public School 2026 - 12 Tiết AI"
+            >
+              <img
+                alt="Manabie Logo"
+                className="h-6 w-6 rounded object-contain shrink-0 group-hover:scale-105 transition-transform"
+                src={MANABIE_LOGO}
+              />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10.5px] font-black uppercase text-tertiary tracking-wider leading-none truncate">
+                  12 TIẾT AI
+                </span>
+                <span className="text-[8.5px] text-on-surface-variant leading-none mt-0.5 truncate">
+                  Manabie 2026
+                </span>
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (page !== 'tro-choi-keo-co') {
+                  triggerPageTransition('gioi-thieu');
+                }
+              }}
+              className={`flex items-center justify-center p-0.5 rounded-lg group ${
+                page === 'tro-choi-keo-co' ? 'cursor-default' : 'cursor-pointer hover:bg-surface-container-high'
+              }`}
+              title="12 Tiết AI • Manabie 2026"
+            >
+              <img
+                alt="Manabie Logo"
+                className="h-5 w-5 sm:h-6 sm:w-6 rounded object-contain group-hover:scale-110 transition-transform"
+                src={MANABIE_LOGO}
+              />
+            </button>
+          )}
+
           <button
             type="button"
-            disabled={page === 'tro-choi-keo-co'}
-            onClick={() => {
-              if (page === 'tro-choi-keo-co') return;
-              triggerPageTransition('gioi-thieu');
-            }}
-            className={`flex items-center gap-2 sm:gap-3 text-left shrink-0 ${
-              page === 'tro-choi-keo-co' ? 'cursor-default opacity-85' : 'cursor-pointer group'
-            }`}
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-surface-container-high/80 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer border border-white/10 shrink-0"
+            title={sidebarExpanded ? 'Thu gọn menu điều hướng' : 'Mở rộng menu điều hướng'}
           >
-            <img
-              alt="Manabie Logo"
-              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg object-contain shadow-md group-hover:scale-105 transition-transform"
-              src={MANABIE_LOGO}
-            />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1">
-                <span className="text-label-caps text-tertiary uppercase text-[10px] sm:text-[11px] font-bold">12 TIẾT AI</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-              </div>
-              <span className="text-label-kicker text-on-surface-variant uppercase text-[9px] sm:text-[10px]">
-                Manabie Public School 2026
-              </span>
-            </div>
+            <span className="material-symbols-outlined text-[18px]">
+              {sidebarExpanded ? 'chevron_right' : 'menu'}
+            </span>
           </button>
+        </div>
 
-          {/* CHỈ BÁO TIẾN TRÌNH Ở TRUNG TÂM HEADER */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high/60 border border-white/10 text-on-surface-variant text-[11px] font-semibold">
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-            <span>{BRIDGE_LABELS[page]}</span>
-          </div>
-
-          {/* NÚT TIỆN ÍCH PHẢI */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Hiển thị badge tĩnh báo chế độ đang dùng */}
-            <div
-              className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-kicker uppercase border ${
-                controlMode === 'ar'
-                  ? 'bg-tertiary-container/30 text-tertiary border-tertiary/30'
-                  : 'bg-surface-container-high text-secondary border-white/10'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  controlMode === 'ar' ? 'bg-tertiary animate-pulse' : 'bg-secondary'
-                }`}
-              />
-              <span>{controlMode === 'ar' ? 'AR' : 'CHUỘT'}</span>
+        {/* Cụm Tiện ích chuyển từ Header xuống Sidebar khi ở Mục 3 (hoặc hiển thị luôn trong Sidebar) */}
+        {sidebarExpanded ? (
+          <div className="mb-2.5 flex flex-col gap-1.5">
+            {/* Badge trang hiện tại */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-container-high/60 border border-white/10 text-on-surface-variant text-[10.5px] font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse shrink-0" />
+              <span className="truncate">{BRIDGE_LABELS[page]}</span>
             </div>
 
+            {/* Nút Âm thanh + Toàn màn hình + Chế độ */}
+            <div className="flex items-center justify-between gap-1 p-1 rounded-xl bg-surface-container-high/40 border border-white/5">
+              <button
+                onClick={toggleMute}
+                className="flex-1 py-1 px-1.5 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1 transition-colors text-[10px] font-bold border border-white/5 cursor-pointer"
+                title={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[15px]">
+                  {muted ? 'volume_off' : 'volume_up'}
+                </span>
+                <span>{muted ? 'Tắt' : 'Bật'}</span>
+              </button>
+
+              <button
+                onClick={toggleFullscreen}
+                className="w-7 h-7 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors border border-white/5 cursor-pointer shrink-0"
+                title="Toàn màn hình"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[15px]">fullscreen</span>
+              </button>
+
+              <div
+                className={`px-1.5 py-1 rounded-lg text-[9.5px] font-black uppercase border flex items-center gap-1 shrink-0 ${
+                  controlMode === 'ar'
+                    ? 'bg-tertiary-container/30 text-tertiary border-tertiary/30'
+                    : 'bg-surface-container text-secondary border-white/10'
+                }`}
+              >
+                <span className="w-1 h-1 rounded-full bg-current" />
+                <span>{controlMode === 'ar' ? 'AR' : 'Chuột'}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Khi Sidebar thu gọn ở dạng icon: hiển thị 2 icon Âm thanh & Fullscreen */
+          <div className="flex flex-col items-center gap-1 mb-2 pb-2 border-b border-white/10">
             <button
               onClick={toggleMute}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer border border-white/5"
+              className="w-8 h-8 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer border border-white/5"
               title={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+              <span className="material-symbols-outlined text-[16px]">
                 {muted ? 'volume_off' : 'volume_up'}
               </span>
             </button>
 
             <button
               onClick={toggleFullscreen}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer border border-white/5"
+              className="w-8 h-8 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer border border-white/5"
               title="Toàn màn hình"
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">fullscreen</span>
-            </button>
-
-            {/* NÚT MỞ RỘNG / THU GỌN THANH ĐIỀU HƯỚNG BÊN PHẢI */}
-            <button
-              onClick={() => setSidebarExpanded((prev) => !prev)}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all border cursor-pointer ${
-                sidebarExpanded
-                  ? 'bg-primary-container text-on-primary-container border-primary/50 shadow-sm'
-                  : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface border-white/10'
-              }`}
-              title={sidebarExpanded ? 'Thu gọn menu điều hướng bên phải' : 'Mở rộng menu điều hướng bên phải'}
-              type="button"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {sidebarExpanded ? 'dock_to_right' : 'view_sidebar'}
-              </span>
-              <span className="hidden sm:inline">{sidebarExpanded ? 'Thu gọn' : 'Menu'}</span>
+              <span className="material-symbols-outlined text-[16px]">fullscreen</span>
             </button>
           </div>
-        </div>
-      </header>
-
-      {/* THANH ĐIỀU HƯỚNG CỘT BÊN PHẢI (COLLAPSIBLE RIGHT SIDEBAR) */}
-      <aside
-        aria-label="Thanh điều hướng các bước"
-        className={`fixed right-2 sm:right-3 top-16 sm:top-20 z-40 transition-all duration-300 ease-in-out ${
-          sidebarExpanded
-            ? 'w-56 sm:w-64 bg-surface-container-lowest/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.65)] p-3'
-            : 'w-12 sm:w-14 bg-surface-container-lowest/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-1.5 sm:p-2'
-        }`}
-      >
-        {/* Header của Sidebar: Nút phóng to / thu gọn */}
-        <div
-          className={`flex items-center ${
-            sidebarExpanded ? 'justify-between pb-2 mb-2 border-b border-white/10' : 'justify-center pb-1 mb-1'
-          }`}
-        >
-          {sidebarExpanded && (
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-tertiary">alt_route</span>
-              <span className="text-[10px] font-black uppercase text-on-surface-variant tracking-wider">
-                TIẾN TRÌNH 4 BƯỚC
-              </span>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-surface-container-high/80 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer border border-white/10"
-            title={sidebarExpanded ? 'Thu gọn về dạng icon' : 'Phóng to xem đầy đủ các bước'}
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {sidebarExpanded ? 'chevron_right' : 'chevron_left'}
-            </span>
-          </button>
-        </div>
+        )}
 
         {/* Danh sách 4 bước */}
         <nav className="flex flex-col gap-1.5">
@@ -493,9 +518,22 @@ export default function App() {
         )}
       </aside>
 
-      {/* NỘI DUNG TỪNG TRANG VỚI KỸ THUẬT STAGGER & MORPH */}
-      <main key={motionKey} className="w-full pt-16 sm:pt-18 pb-2 sm:pb-5 flex-1 flex flex-col justify-center pr-12 sm:pr-14 md:pr-16">
-        <div className="max-w-7xl w-full mx-auto px-2.5 sm:px-6">
+      {/* NỘI DUNG TỪNG TRANG VỚI KỸ THUẬT STAGGER & MORPH (KHÔNG SCROLL Ở MỤC 1, 2, 3) */}
+      <main
+        key={motionKey}
+        className={`w-full ${
+          page === 'tong-ket'
+            ? 'pt-4 sm:pt-6 pb-6 min-h-[calc(100vh-4rem)]'
+            : 'p-1 sm:p-2 h-full max-h-screen overflow-hidden'
+        } flex flex-col justify-center pr-12 sm:pr-14 md:pr-16`}
+      >
+        <div
+          className={`max-w-7xl w-full mx-auto px-1 sm:px-3 ${
+            page === 'tro-choi-keo-co' || page === 'gioi-thieu' || page === 'huong-dan'
+              ? 'h-full flex flex-col justify-center items-center'
+              : ''
+          }`}
+        >
           {page === 'gioi-thieu' && (
             <WelcomePage
               controlMode={controlMode}
@@ -552,23 +590,25 @@ export default function App() {
         </div>
       </main>
 
-      {/* FOOTER CHUNG */}
-      <footer className="w-full bg-surface-container-lowest/90 backdrop-blur-md border-t border-white/10 py-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-on-surface-variant">
-            <span className="text-label-caps uppercase text-tertiary">
-              CHƯƠNG TRÌNH 12 TIẾT GIÁO DỤC TRÍ TUỆ NHÂN TẠO CỐT LÕI
-            </span>
-            <span className="text-outline-variant">•</span>
-            <span className="text-body-sm text-on-surface-variant">Manabie AI EdTech Platform</span>
+      {/* FOOTER CHUNG (CHỈ HIỂN THỊ KHI Ở MỤC 4 TỔNG KẾT ĐỂ MỤC 1, 2, 3 KHÔNG BỊ SCROLL VÀ TOÀN BỘ ĐÃ ĐƯỢC CHUYỂN VÀO SIDEBAR) */}
+      {page === 'tong-ket' && (
+        <footer className="w-full shrink-0 bg-surface-container-lowest/90 backdrop-blur-md border-t border-white/10 py-1 sm:py-1.5 text-[10px] sm:text-xs">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-on-surface-variant truncate">
+              <span className="text-[10px] uppercase font-bold text-tertiary">
+                12 TIẾT AI CỐT LÕI
+              </span>
+              <span className="text-outline-variant">•</span>
+              <span className="hidden sm:inline text-on-surface-variant">Manabie AI EdTech Platform</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <span className="text-[9.5px] text-outline uppercase hidden sm:inline">Manabie Public School 2026</span>
+              <span className="text-outline-variant hidden sm:inline">•</span>
+              <span className="text-[10px] sm:text-xs text-tertiary font-semibold">Made by Nguyen Hoang Tuan</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-label-kicker text-outline uppercase">Manabie Public School 2026</span>
-            <span className="text-outline-variant">•</span>
-            <span className="text-body-sm text-tertiary font-semibold">Made by Nguyen Hoang Tuan</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* MODAL HƯỚNG DẪN THIẾT BỊ */}
       {qrModalOpen && (
@@ -606,7 +646,7 @@ export default function App() {
 }
 
 /* ============================================================================
- * 01 - TRANG CHÀO MỪNG (WELCOME PAGE) — CÓ CỔNG MORPH PORTAL & CHỌN CHẾ ĐỘ TRƯỚC KHI CHƠI
+ * 01 - TRANG CHÀO MỪNG (WELCOME PAGE) — CO GIÃN GỌN GÀNG, KHÔNG SCROLL, ĐẦY ĐỦ THÔNG TIN
  * ============================================================================ */
 function WelcomePage({
   controlMode,
@@ -620,179 +660,175 @@ function WelcomePage({
   onOpenQr: () => void;
 }) {
   return (
-    <div className="relative w-full max-w-5xl mx-auto rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl p-3.5 sm:p-5 md:p-7 overflow-hidden shadow-2xl border border-white/10 ppt-page-enter">
-      {/* Cổng Morph Portal giống repo tham chiếu */}
+    <div className="relative w-full max-w-4xl mx-auto rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl p-3 sm:p-4 md:p-5 overflow-hidden shadow-2xl border border-white/10 ppt-page-enter flex flex-col justify-between gap-2 sm:gap-3 h-full max-h-full">
+      {/* Cổng Morph Portal */}
       <div className="workshop-morph-gate" aria-hidden="true">
         <i>AI</i>
         <b>ĐẤU TRƯỜNG KÉO CO</b>
       </div>
 
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-container/25 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-tertiary-container/25 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary-container/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-tertiary-container/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col gap-3 sm:gap-4.5">
-        {/* Top bar */}
-        <div className="flex flex-wrap items-center justify-between gap-1.5 pb-0.5 ppt-stagger-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high border border-white/10 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse shadow-[0_0_8px_currentColor]" />
-            <span className="text-[10px] sm:text-label-caps text-tertiary uppercase">
-              BƯỚC 01 / 04 • KHỞI ĐỘNG
-            </span>
-          </div>
+      {/* Top bar chip */}
+      <div className="flex items-center justify-between pb-0.5 ppt-stagger-1 shrink-0">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-high border border-white/10 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse shadow-[0_0_8px_currentColor]" />
+          <span className="text-[10px] sm:text-label-caps text-tertiary uppercase font-bold">
+            BƯỚC 01 / 04 • KHỞI ĐỘNG
+          </span>
         </div>
+        <span className="text-[10px] sm:text-label-kicker text-secondary uppercase tracking-[0.14em]">
+          SỞ GD&ĐT • MANABIE EDTECH
+        </span>
+      </div>
 
-        {/* Nội dung chính gọn gàng, co giãn mobile-first */}
-        <div className="flex flex-col gap-3 sm:gap-4">
-          <div className="flex flex-col gap-1 sm:gap-1.5 ppt-stagger-1">
-            <span className="text-label-kicker text-secondary uppercase tracking-[0.16em]">
-              SỞ GIÁO DỤC VÀ ĐÀO TẠO • MANABIE EDTECH
-            </span>
-            <h1 className="text-display-lg md:text-display-xl text-on-surface uppercase">
-              CHƯƠNG TRÌNH BỒI DƯỠNG{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed via-tertiary to-emerald-300">
-                GIÁO VIÊN PHỔ THÔNG
+      {/* Tiêu đề chương trình */}
+      <div className="flex flex-col gap-0.5 ppt-stagger-1 shrink-0">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-on-surface uppercase leading-tight">
+          CHƯƠNG TRÌNH BỒI DƯỠNG{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed via-tertiary to-emerald-300">
+            GIÁO VIÊN PHỔ THÔNG
+          </span>
+        </h1>
+        <p className="text-xs sm:text-body-sm text-secondary-fixed-dim font-semibold">
+          Triển khai thực hiện 12 tiết giáo dục trí tuệ nhân tạo cốt lõi
+        </p>
+      </div>
+
+      {/* Mascot + Lời chào sư phạm */}
+      <div className="p-2.5 sm:p-3 rounded-xl bg-surface-container/85 border border-white/10 shadow-md flex items-center justify-between gap-3 ppt-stagger-2 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <img
+            alt="Mascot Mana chào đón giáo viên"
+            className="w-11 h-11 sm:w-13 sm:h-13 object-contain shrink-0 drop-shadow-[0_4px_12px_rgba(23,219,229,0.4)] ppt-mascot-enter"
+            src={BRAND_MASCOTS.welcomeAnimated}
+          />
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-label-caps text-tertiary uppercase text-[10px] sm:text-[11px] font-bold">
+                MANA TRỢ LÝ SƯ PHẠM
               </span>
-            </h1>
-            <p className="text-headline-sm text-secondary-fixed-dim font-semibold max-w-3xl">
-              Triển khai thực hiện 12 tiết giáo dục trí tuệ nhân tạo cốt lõi
+              <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-ping" />
+            </div>
+            <p className="text-xs sm:text-body-sm text-on-surface leading-snug">
+              Cùng khám phá cách đưa giáo dục AI vào lớp học thông qua trò chơi kéo co giữa{' '}
+              <strong className="text-tertiary font-bold">Đội Con người</strong> và{' '}
+              <strong className="text-primary font-bold">Đội AI</strong>!
             </p>
           </div>
-
-          {/* Mascot + Intro Box */}
-          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-surface-container/85 border border-white/10 shadow-lg flex items-center justify-between gap-3 sm:gap-4 ppt-stagger-2">
-            <div className="flex items-center gap-3">
-              <img
-                alt="Mascot Mana chào đón giáo viên"
-                className="w-13 h-13 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-[0_4px_12px_rgba(23,219,229,0.4)] ppt-mascot-enter"
-                src={BRAND_MASCOTS.welcomeAnimated}
-              />
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-label-caps text-tertiary uppercase text-[10.5px]">
-                    MANA TRỢ LÝ SƯ PHẠM
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-ping" />
-                </div>
-                <p className="text-body-base text-on-surface leading-snug">
-                  Cùng khám phá cách đưa giáo dục AI vào lớp học thông qua trò chơi kéo co giữa{' '}
-                  <strong className="text-tertiary font-bold">Đội Con người</strong> và{' '}
-                  <strong className="text-primary font-bold">Đội AI</strong>!
-                </p>
-              </div>
-            </div>
-
-            <img
-              src={BRAND_MASCOTS.tugOfWarScene}
-              alt="Hoạt cảnh Kéo co Đội Con Người vs Đội AI"
-              className="hidden sm:block h-20 md:h-24 w-auto object-contain shrink-0 drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)] tug-scene-live"
-            />
-          </div>
-
-          {/* BỘ CHỌN CHẾ ĐỘ ĐIỀU KHIỂN TRƯỚC KHI CHƠI (CHUỘT HAY AR) */}
-          <div className="p-2.5 sm:p-4 rounded-xl bg-surface-container-high/70 border border-white/15 flex flex-col gap-2 ppt-stagger-3">
-            <div className="flex items-center justify-between">
-              <span className="text-label-caps text-tertiary uppercase flex items-center gap-1.5 text-[10px] sm:text-[11px]">
-                <span className="material-symbols-outlined text-[16px]">tune</span>
-                CHỌN PHƯƠNG THỨC TƯƠNG TÁC
-              </span>
-              <button
-                type="button"
-                onClick={onOpenQr}
-                className="text-label-kicker text-secondary underline cursor-pointer"
-              >
-                Chi tiết
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {/* Option 1: Camera AR */}
-              <button
-                type="button"
-                onClick={() => {
-                  audio.init();
-                  audio.playClick();
-                  onSelectControlMode('ar');
-                }}
-                className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 sm:gap-3 ${
-                  controlMode === 'ar'
-                    ? 'bg-tertiary-container/35 border-tertiary shadow-[0_0_18px_rgba(23,219,229,0.3)]'
-                    : 'bg-surface-container-lowest/60 border-white/10 opacity-80 hover:opacity-100'
-                }`}
-              >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">front_hand</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-body-base font-bold text-on-surface">
-                      Camera AR (Tay & Mặt)
-                    </span>
-                    {controlMode === 'ar' && (
-                      <span className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#17dbe5]" />
-                    )}
-                  </div>
-                  <span className="text-body-sm text-on-surface-variant block truncate">
-                    Vẫy tay hoặc nghiêng mặt Trái / Phải
-                  </span>
-                </div>
-              </button>
-
-              {/* Option 2: Click Chuột */}
-              <button
-                type="button"
-                onClick={() => {
-                  audio.init();
-                  audio.playClick();
-                  onSelectControlMode('mouse');
-                }}
-                className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 sm:gap-3 ${
-                  controlMode === 'mouse'
-                    ? 'bg-primary-container/45 border-primary shadow-[0_0_18px_rgba(184,196,255,0.3)]'
-                    : 'bg-surface-container-lowest/60 border-white/10 opacity-80 hover:opacity-100'
-                }`}
-              >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px] sm:text-[22px]">touch_app</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-body-base font-bold text-on-surface">
-                      Chế độ Chuột / Cảm ứng
-                    </span>
-                    {controlMode === 'mouse' && (
-                      <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_#b8c4ff]" />
-                    )}
-                  </div>
-                  <span className="text-body-sm text-on-surface-variant block truncate">
-                    Click chọn trực tiếp thẻ đáp án
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Action CTA Bar: Luôn bắt buộc đi qua Mục 02 (Hướng dẫn & Luật chơi) */}
-          <div className="flex flex-col items-stretch gap-2.5 pt-0.5 ppt-stagger-4">
-            <button
-              type="button"
-              onClick={onNext}
-              className="pinch-host group w-full px-5 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] text-headline-sm font-black uppercase tracking-wide flex items-center justify-center gap-2.5 shadow-[0_8px_24px_rgba(23,219,229,0.35)] hover:brightness-110 transition-all cursor-pointer"
-            >
-              <PinchMark live />
-              <span>TIẾP TỤC: XEM HƯỚNG DẪN & CHỌN CHẾ ĐỘ (BƯỚC 02)</span>
-              <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </button>
-          </div>
         </div>
+
+        <img
+          src={BRAND_MASCOTS.tugOfWarScene}
+          alt="Hoạt cảnh Kéo co"
+          className="hidden md:block h-14 sm:h-16 w-auto object-contain shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] tug-scene-live"
+        />
+      </div>
+
+      {/* Bộ chọn chế độ điều khiển */}
+      <div className="p-2 sm:p-2.5 rounded-xl bg-surface-container-high/70 border border-white/15 flex flex-col gap-1.5 ppt-stagger-3 shrink-0">
+        <div className="flex items-center justify-between">
+          <span className="text-label-caps text-tertiary uppercase flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold">
+            <span className="material-symbols-outlined text-[15px]">tune</span>
+            CHỌN PHƯƠNG THỨC TƯƠNG TÁC
+          </span>
+          <button
+            type="button"
+            onClick={onOpenQr}
+            className="text-[10px] sm:text-label-kicker text-secondary underline cursor-pointer"
+          >
+            Chi tiết
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Option 1: Camera AR */}
+          <button
+            type="button"
+            onClick={() => {
+              audio.init();
+              audio.playClick();
+              onSelectControlMode('ar');
+            }}
+            className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+              controlMode === 'ar'
+                ? 'bg-tertiary-container/35 border-tertiary shadow-[0_0_18px_rgba(23,219,229,0.3)]'
+                : 'bg-surface-container-lowest/60 border-white/10 opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">front_hand</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs sm:text-body-sm font-bold text-on-surface">
+                  Camera AR (Tay & Mặt)
+                </span>
+                {controlMode === 'ar' && (
+                  <span className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#17dbe5]" />
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs text-on-surface-variant block truncate">
+                Vẫy tay hoặc nghiêng mặt Trái / Phải
+              </span>
+            </div>
+          </button>
+
+          {/* Option 2: Click Chuột */}
+          <button
+            type="button"
+            onClick={() => {
+              audio.init();
+              audio.playClick();
+              onSelectControlMode('mouse');
+            }}
+            className={`p-2 sm:p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+              controlMode === 'mouse'
+                ? 'bg-primary-container/45 border-primary shadow-[0_0_18px_rgba(184,196,255,0.3)]'
+                : 'bg-surface-container-lowest/60 border-white/10 opacity-80 hover:opacity-100'
+            }`}
+          >
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">touch_app</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs sm:text-body-sm font-bold text-on-surface">
+                  Chế độ Chuột / Cảm ứng
+                </span>
+                {controlMode === 'mouse' && (
+                  <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_#b8c4ff]" />
+                )}
+              </div>
+              <span className="text-[10px] sm:text-xs text-on-surface-variant block truncate">
+                Click chọn trực tiếp thẻ đáp án
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Action CTA Bar */}
+      <div className="pt-0.5 ppt-stagger-4 shrink-0">
+        <button
+          type="button"
+          onClick={onNext}
+          className="pinch-host group w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] text-xs sm:text-body-base font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(23,219,229,0.35)] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+        >
+          <PinchMark live />
+          <span>TIẾP TỤC: XEM HƯỚNG DẪN CHƠI (BƯỚC 02)</span>
+          <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
+            arrow_forward
+          </span>
+        </button>
       </div>
     </div>
   );
 }
 
 /* ============================================================================
- * 02 - TRANG HƯỚNG DẪN CHƠI & CHỌN CHẾ ĐỘ TRƯỚC KHI VÀO ĐẤU TRƯỜNG
+ * 02 - TRANG HƯỚNG DẪN CHƠI (GUIDE PAGE) — CHIA 2 BÊN, CÓ NÚT BẮT ĐẦU TEST AR
  * ============================================================================ */
 function GuidePage({
   controlMode,
@@ -805,10 +841,8 @@ function GuidePage({
   onStartGame: (mode: ControlMode) => void;
 }) {
   const [markerOffset, setMarkerOffset] = useState(0);
-  const [testResult, setTestResult] = useState<{
-    side: 'LEFT' | 'RIGHT';
-    source: 'hand' | 'face';
-  } | null>(null);
+  const [isTestingAR, setIsTestingAR] = useState(false);
+  const [isEnlarged, setIsEnlarged] = useState(false);
 
   useEffect(() => {
     let dir = 1;
@@ -822,260 +856,286 @@ function GuidePage({
     return () => clearInterval(timer);
   }, []);
 
+  // Hỗ trợ phím Escape để thoát chế độ phóng to
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEnlarged) {
+        setIsEnlarged(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEnlarged]);
+
   return (
-    <div className="flex flex-col w-full gap-3 sm:gap-4 relative ppt-page-enter">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2.5 sm:gap-4 ppt-stagger-1">
+    <div className="relative w-full max-w-5xl mx-auto rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl p-2.5 sm:p-3.5 md:p-4 overflow-hidden shadow-2xl border border-white/10 ppt-page-enter flex flex-col justify-between gap-2.5 h-full max-h-full">
+      {/* Header & Telemetry */}
+      <div className="flex flex-row items-center justify-between gap-2 pb-0.5 ppt-stagger-1 shrink-0">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-surface-container-high border border-white/10 mb-1 shadow-sm">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface-container-high border border-white/10 mb-0.5 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_8px_rgba(23,219,229,0.8)]" />
-            <span className="text-[10px] sm:text-label-caps text-tertiary">
+            <span className="text-[10px] sm:text-label-caps text-tertiary uppercase font-bold">
               BƯỚC 02 / 04 • QUY TẮC & LUẬT CHƠI
             </span>
           </div>
-          <h1 className="text-display-lg text-on-surface">
+          <h1 className="text-base sm:text-xl md:text-2xl font-black text-on-surface uppercase leading-tight">
             HƯỚNG DẪN CHƠI{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">
               AI TUG OF WAR
             </span>
           </h1>
-          <p className="text-body-sm sm:text-body-lg text-on-surface-variant mt-0.5 max-w-2xl">
-            Tìm hiểu luật kéo co và bấm <strong>Bắt đầu</strong> để bước vào đấu trường!
-          </p>
         </div>
 
         {/* Telemetry gọn nhẹ */}
-        <div className="flex items-center gap-3 bg-surface-container-low/90 backdrop-blur-md px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-md border border-white/10 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 bg-surface-container-low/90 backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl shadow-md border border-white/10 shrink-0">
           <div className="flex flex-col items-start">
-            <span className="text-[9px] sm:text-label-kicker text-outline uppercase">Thời lượng</span>
+            <span className="text-[8.5px] sm:text-[9.5px] text-outline uppercase font-bold">Thời lượng</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-metric-display text-tertiary">15</span>
-              <span className="text-[10px] sm:text-label-caps text-on-surface-variant">GIÂY/CÂU</span>
+              <span className="text-sm sm:text-base font-black font-mono text-tertiary leading-none">15</span>
+              <span className="text-[9px] text-on-surface-variant font-bold">GIÂY/CÂU</span>
             </div>
           </div>
-          <div className="w-px h-7 bg-surface-variant" />
+          <div className="w-px h-6 bg-surface-variant" />
           <div className="flex flex-col items-start">
-            <span className="text-[9px] sm:text-label-kicker text-outline uppercase">Lực kéo</span>
+            <span className="text-[8.5px] sm:text-[9.5px] text-outline uppercase font-bold">Lực kéo</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-metric-display text-primary">+1.8</span>
-              <span className="text-[10px] sm:text-label-caps text-on-surface-variant">MÉT/ĐÚNG</span>
+              <span className="text-sm sm:text-base font-black font-mono text-primary leading-none">+1.8</span>
+              <span className="text-[9px] text-on-surface-variant font-bold">MÉT/ĐÚNG</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3 BƯỚC HƯỚNG DẪN RÕ RÀNG, TỐI ƯU MOBILE FIRST */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 ppt-stagger-2">
-        {/* Step 1 */}
-        <div className="lux-card bg-surface-container-low/85 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-white/10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] sm:text-label-caps text-primary px-2.5 py-0.5 rounded-md bg-primary-container/30">
-                01 • QUAN SÁT
-              </span>
+      {/* BỐ CỤC 2 BÊN: CỘT 1 (GOM 3 BƯỚC XẾP DỌC) & CỘT 2 (TEST CAMERA AR / SÂN KHẤU MÔ PHỎNG) */}
+      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-3 flex-1 min-h-0">
+        {/* CỘT 1 (5 PHẦN): GOM 3 BƯỚC HƯỚNG DẪN XẾP DỌC — THOÁNG MẮT, KHÔNG BỊ NÉN */}
+        <div className="lg:col-span-5 flex flex-col justify-around gap-2 h-full min-h-0 ppt-stagger-2">
+          {/* Step 1 */}
+          <div className="rounded-xl bg-surface-container-low/90 border border-white/10 p-2 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 shadow-sm hover:border-white/25 transition-colors">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary-container/30 border border-primary/30 p-1 flex items-center justify-center shrink-0">
               <img
                 src={BRAND_MASCOTS.inspectAnimated}
-                alt="Mana Đọc câu hỏi"
-                className="w-10 h-10 sm:w-13 sm:h-13 object-contain"
+                alt="01"
+                className="w-full h-full object-contain"
               />
             </div>
-            <h3 className="text-headline-sm sm:text-headline-md text-on-surface mb-1">ĐỌC TÌNH HUỐNG</h3>
-            <p className="text-body-sm text-on-surface-variant leading-relaxed">
-              Phân tích xem tình huống công cụ trên màn hình có dùng <strong>Trí tuệ nhân tạo (AI)</strong> hay chỉ là <strong>Tự động hóa</strong>.
-            </p>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] sm:text-[10px] font-black text-primary px-1.5 py-0.2 rounded bg-primary-container/40 uppercase">
+                  01 • QUAN SÁT
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-white">ĐỌC TÌNH HUỐNG</span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-on-surface-variant leading-snug">
+                Phân tích xem công cụ có dùng <strong>Trí tuệ nhân tạo (AI)</strong> hay chỉ là <strong>Tự động hóa</strong>.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Step 2 */}
-        <div className="lux-card bg-surface-container-low/85 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-tertiary/30 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] sm:text-label-caps text-tertiary px-2.5 py-0.5 rounded-md bg-tertiary-container/40">
-                02 • RA QUYẾT ĐỊNH
-              </span>
+          {/* Step 2 */}
+          <div className="rounded-xl bg-surface-container-low/90 border border-tertiary/30 p-2 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 shadow-sm hover:border-tertiary/50 transition-colors">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-tertiary-container/30 border border-tertiary/30 p-1 flex items-center justify-center shrink-0">
               <img
                 src={BRAND_MASCOTS.welcomeAnimated}
-                alt="Mana Chọn đáp án"
-                className="w-10 h-10 sm:w-13 sm:h-13 object-contain"
+                alt="02"
+                className="w-full h-full object-contain"
               />
             </div>
-            <h3 className="text-headline-sm sm:text-headline-md text-on-surface mb-1">CHỌN TRÁI HOẶC PHẢI</h3>
-            <p className="text-body-sm text-on-surface-variant leading-relaxed">
-              • <strong className="text-secondary">TRÁI (👈)</strong>: Chọn <strong>KHÔNG CÓ AI</strong>.<br />
-              • <strong className="text-tertiary">PHẢI (👉)</strong>: Chọn <strong>CÓ SỬ DỤNG AI</strong>.
-            </p>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] sm:text-[10px] font-black text-tertiary px-1.5 py-0.2 rounded bg-tertiary-container/40 uppercase">
+                  02 • RA QUYẾT ĐỊNH
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-white">CHỌN TRÁI / PHẢI</span>
+              </div>
+              <div className="text-[11px] sm:text-xs text-on-surface-variant leading-snug flex items-center gap-2 flex-wrap">
+                <span>• <strong className="text-secondary">TRÁI (👈)</strong>: KHÔNG CÓ AI</span>
+                <span className="text-outline-variant">|</span>
+                <span>• <strong className="text-tertiary">PHẢI (👉)</strong>: CÓ DÙNG AI</span>
+              </div>
+            </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between gap-1.5">
-            <span className="px-2 py-0.5 rounded-md bg-secondary-container/60 text-secondary text-[9.5px] sm:text-label-kicker font-bold">
-              👈 TRÁI: KHÔNG AI
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-tertiary-container/60 text-tertiary text-[9.5px] sm:text-label-kicker font-bold">
-              PHẢI: CÓ AI 👉
-            </span>
-          </div>
-        </div>
 
-        {/* Step 3 */}
-        <div className="lux-card bg-surface-container-low/85 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-md border border-white/10 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] sm:text-label-caps text-primary px-2.5 py-0.5 rounded-md bg-primary-container/30">
-                03 • KÉO DÂY
-              </span>
+          {/* Step 3 */}
+          <div className="rounded-xl bg-surface-container-low/90 border border-white/10 p-2 sm:p-2.5 flex items-center gap-2.5 sm:gap-3 shadow-sm hover:border-white/25 transition-colors">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 p-1 flex items-center justify-center shrink-0">
               <img
                 src={BRAND_MASCOTS.actionAnimated}
-                alt="Mana Kéo co"
-                className="w-10 h-10 sm:w-13 sm:h-13 object-contain"
+                alt="03"
+                className="w-full h-full object-contain"
               />
             </div>
-            <h3 className="text-headline-sm sm:text-headline-md text-on-surface mb-1">KÉO CO & CHIẾN THẮNG</h3>
-            <p className="text-body-sm text-on-surface-variant leading-relaxed">
-              Trả lời đúng giúp <strong>Đội Con Người</strong> kéo dây <strong>+1.8m</strong> (+150đ). Trả lời sai <strong>Đội AI</strong> sẽ kéo dây ngược lại!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* SÂN KHẤU MÔ PHỎNG KÉO CO (CO GIÃN GỌN NHẸ TRÊN MOBILE) */}
-      <div className="relative bg-surface-container-lowest/90 backdrop-blur-xl rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-xl overflow-hidden border border-white/10 ppt-stagger-3">
-        <div className="w-full flex justify-between items-center px-2 text-[9px] sm:text-label-kicker text-outline mb-1 relative z-20">
-          <span className="text-secondary font-bold truncate">👈 ĐỘI NGƯỜI (KHI ĐÚNG)</span>
-          <span className="text-error font-bold px-2 py-0.5 rounded-full bg-error-container/40 border border-error/40 text-[9px] shrink-0">
-            VẠCH TÂM 0.0M
-          </span>
-          <span className="text-tertiary font-bold truncate text-right">ĐỘI AI (KHI SAI) 👉</span>
-        </div>
-
-        <div className="relative h-28 sm:h-38 md:h-48 flex items-center justify-center overflow-hidden rounded-lg sm:rounded-xl bg-surface-container/60 border border-white/5 py-2 sm:py-3">
-          {/* Vạch chuẩn trung tâm 0.0m */}
-          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-error/80 z-10" />
-
-          {/* Hoạt cảnh Kéo co di chuyển trực quan qua lại theo vạch tâm */}
-          <div
-            className="relative z-20 transition-transform duration-150 flex items-center justify-center"
-            style={{ transform: `translateX(${markerOffset}px)` }}
-          >
-            <img
-              src={BRAND_MASCOTS.tugOfWarScene}
-              alt="Hoạt cảnh Kéo co Đội Con Người vs Đội AI"
-              className="h-22 sm:h-32 md:h-42 max-w-full w-auto object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.7)] tug-scene-live"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* NẾU CHỌN CHẾ ĐỘ AR: KHUNG THỬ NGHIỆM CỬ CHỈ TRƯỚC KHI BẮT ĐẦU */}
-      {controlMode === 'ar' && (
-        <div className="relative rounded-xl sm:rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl border-2 border-tertiary/40 p-3 sm:p-4 shadow-xl flex flex-col gap-2.5 ppt-stagger-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-ping" />
-              <span className="text-[11px] sm:text-label-caps text-tertiary font-bold uppercase">
-                THỬ NGHIỆM CAMERA AR TRƯỚC KHI BẮT ĐẦU
-              </span>
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] sm:text-[10px] font-black text-emerald-400 px-1.5 py-0.2 rounded bg-emerald-500/25 uppercase">
+                  03 • KÉO DÂY
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-white">KÉO CO CHIẾN THẮNG</span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-on-surface-variant leading-snug">
+                Đúng: <strong>Đội Người +1.8m (+150đ)</strong>. Sai: <strong>Đội AI kéo lùi</strong>!
+              </p>
             </div>
-            {testResult && (
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setTestResult(null);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-tertiary text-[11px] sm:text-body-sm font-bold transition-all cursor-pointer border border-tertiary/40 hover:border-tertiary"
-              >
-                <span className="material-symbols-outlined text-[16px]">replay</span>
-                <span>Thử lại</span>
-              </button>
-            )}
           </div>
+        </div>
 
-          <p className="text-xs sm:text-body-sm text-on-surface-variant">
-            Hãy giơ tay trái / phải hoặc nghiêng đầu sang trái / phải trước webcam để làm quen cử chỉ trước khi vào trận!
-          </p>
-
-          <div className="relative">
-            <ARGestureTracker
-              enabled={true}
-              locked={testResult !== null}
-              descNoAI="Thử giơ tay trái hoặc nghiêng đầu Trái"
-              descHasAI="Thử giơ tay phải hoặc nghiêng đầu Phải"
-              selectedSide={testResult?.side ?? null}
-              hasAI={testResult ? testResult.side === 'RIGHT' : undefined}
-              onSelectSide={(side, source) => {
-                audio.playPullSuccess(1);
-                setTestResult({ side, source });
-              }}
-            />
-
-            {/* Overlay kết quả thử nghiệm thành công */}
-            {testResult && (
-              <div className="absolute inset-0 z-40 bg-black/75 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 text-center gap-3 ppt-page-enter">
-                <div className="w-12 h-12 rounded-full bg-emerald-400/20 text-emerald-400 border border-emerald-400/40 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[28px]">check_circle</span>
-                </div>
-                <div>
-                  <span className="text-label-caps text-emerald-400 font-bold uppercase block mb-0.5">
-                    NHẬN DIỆN THÀNH CÔNG!
+        {/* CỘT 2 (7 PHẦN): KHUNG THỬ NGHIỆM AR HOẶC SÂN KHẤU MÔ PHỎNG (KHI PHÓNG TO: TẠM THỜI OVERLAY PHẦN HƯỚNG DẪN) */}
+        <div
+          className={`${
+            controlMode === 'ar' && isEnlarged
+              ? 'absolute inset-0 z-30'
+              : 'lg:col-span-7'
+          } flex flex-col h-full min-h-0 ppt-stagger-3 transition-all duration-300`}
+        >
+          {controlMode === 'ar' ? (
+            <div className={`relative rounded-xl ${isEnlarged ? 'bg-[#090e1c] shadow-2xl' : 'bg-surface-container-lowest/95 backdrop-blur-2xl'} border border-tertiary/40 p-2 sm:p-2.5 shadow-xl flex flex-col gap-1.5 h-full min-h-0 overflow-hidden`}>
+              {/* Header của Khung Test AR */}
+              <div className="flex items-center justify-between pb-1 border-b border-white/10 shrink-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`w-2 h-2 rounded-full ${isTestingAR ? 'bg-tertiary animate-ping' : 'bg-outline'}`} />
+                  <span className="text-[10px] sm:text-label-caps text-tertiary font-bold uppercase truncate">
+                    {isTestingAR ? 'THỬ NGHIỆM AR • PHẢN XẠ 10 MỤC TIÊU' : 'THỬ NGHIỆM CAMERA AR'}
                   </span>
-                  <p className="text-body-base text-on-surface font-bold">
-                    Bạn vừa chọn bên{' '}
-                    <span className={testResult.side === 'LEFT' ? 'text-secondary' : 'text-tertiary'}>
-                      {testResult.side === 'LEFT' ? 'TRÁI (KHÔNG CÓ AI)' : 'PHẢI (CÓ SỬ DỤNG AI)'}
-                    </span>{' '}
-                    bằng {testResult.source === 'hand' ? 'Vẫy tay ✋' : 'Khuôn mặt 😊'}!
-                  </p>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+
+                <div className="flex items-center gap-1 sm:gap-1.5">
+                  {/* NÚT PHÓNG TO / THU NHỎ DUY NHẤT (OVERLAY PHẦN HƯỚNG DẪN) */}
                   <button
                     type="button"
                     onClick={() => {
                       audio.playClick();
-                      setTestResult(null);
+                      setIsEnlarged((prev) => !prev);
                     }}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-body-sm font-bold border border-white/10 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface text-[10px] sm:text-xs font-bold transition-all cursor-pointer border border-white/10"
+                    title={isEnlarged ? 'Thu nhỏ về cột bên phải' : 'Phóng to che phần hướng dẫn'}
                   >
-                    <span className="material-symbols-outlined text-[16px]">replay</span>
-                    <span>Thử lại cử chỉ khác</span>
+                    <span className="material-symbols-outlined text-[15px]">
+                      {isEnlarged ? 'close_fullscreen' : 'open_in_full'}
+                    </span>
+                    <span>{isEnlarged ? 'Thu nhỏ' : 'Phóng to'}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onStartGame('ar')}
-                    className="inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] text-body-sm font-black hover:brightness-110 transition-all cursor-pointer shadow-lg"
-                  >
-                    <span>VÀO CHƠI NGAY</span>
-                    <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                  </button>
+
+                  {isTestingAR && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audio.playClick();
+                        setIsTestingAR(false);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface text-[10px] sm:text-xs font-bold transition-all cursor-pointer border border-white/10"
+                      title="Tắt thử nghiệm"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">videocam_off</span>
+                      <span>Tắt test</span>
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* THANH ĐIỀU HƯỚNG & NÚT BẮT ĐẦU DUY NHẤT */}
-      <div className="bg-surface-container-high/75 backdrop-blur-xl rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-white/15 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 ppt-stagger-4">
+              {/* Nội dung bên trong: Màn hình chờ HOẶC Camera AR */}
+              {!isTestingAR ? (
+                <div className="relative flex-1 min-h-0 rounded-xl bg-surface-container/50 border border-white/10 flex flex-col items-center justify-center p-3 text-center gap-2.5 sm:gap-3">
+                  <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-tertiary/20 animate-ping opacity-60 pointer-events-none" />
+                    <img
+                      src={BRAND_MASCOTS.cameraWaitAnimated}
+                      alt="Mana AR"
+                      className="w-full h-full object-contain relative z-10 drop-shadow-[0_4px_12px_rgba(23,219,229,0.35)]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 max-w-sm">
+                    <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
+                      BẠN ĐÃ CHỌN ĐIỀU KHIỂN BẰNG CAMERA AR
+                    </span>
+                    <p className="text-[11px] sm:text-xs text-on-surface-variant leading-snug">
+                      Bấm nút bên dưới để bật camera và thử giơ tay ✋ hoặc nghiêng đầu 😊 sang Trái / Phải trước khi vào trận.
+                    </p>
+                  </div>
+
+                  {/* NÚT BẮT ĐẦU TEST AR DUY NHẤT (THEO YÊU CẦU: KHÔNG CÓ NÚT PHÓNG TO THỪA KẾ BÊN) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audio.init();
+                      audio.playClick();
+                      setIsTestingAR(true);
+                    }}
+                    className="pinch-host px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] font-black text-xs sm:text-body-sm uppercase tracking-wider shadow-[0_6px_20px_rgba(23,219,229,0.4)] hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border border-white/20"
+                  >
+                    <PinchMark live />
+                    <span className="material-symbols-outlined text-[18px]">videocam</span>
+                    <span>BẮT ĐẦU THỬ NGHIỆM AR</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="relative flex-1 min-h-0 flex flex-col">
+                  <ARGestureTracker
+                    enabled={true}
+                    mode="minigame"
+                    onStartGame={() => onStartGame('ar')}
+                    onSelectSide={() => {}}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative bg-surface-container-lowest/90 backdrop-blur-xl rounded-xl p-2.5 sm:p-3 shadow-xl overflow-hidden border border-white/10 h-full min-h-0 flex flex-col justify-between">
+              <div className="w-full flex justify-between items-center px-1 text-[8.5px] sm:text-[9.5px] text-outline relative z-20 font-bold uppercase">
+                <span className="text-tertiary">◄ ĐỘI NGƯỜI (KHI ĐÚNG +1.8M)</span>
+                <span className="text-error px-2 py-0.5 rounded-full bg-error-container/40 border border-error/40 text-[8.5px]">
+                  VẠCH TÂM 0.0M
+                </span>
+                <span className="text-secondary">ĐỘI AI (KHI SAI -1.5M) ►</span>
+              </div>
+
+              <div className="relative flex-1 flex items-center justify-center overflow-hidden rounded-lg bg-surface-container/60 border border-white/5 py-1 my-1">
+                <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-error/80 z-10 pointer-events-none" />
+                <div
+                  className="relative z-20 transition-transform duration-150 flex items-center justify-center"
+                  style={{ transform: `translateX(${markerOffset}px)` }}
+                >
+                  <img
+                    src={BRAND_MASCOTS.tugOfWarScene}
+                    alt="Hoạt cảnh Kéo co Đội Con Người vs Đội AI"
+                    className="h-24 sm:h-32 md:h-36 max-w-full w-auto object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.65)] tug-scene-live"
+                  />
+                </div>
+              </div>
+
+              <div className="p-2 rounded-lg bg-surface-container-high/60 border border-white/5 flex items-center justify-between text-[11px] text-on-surface-variant">
+                <span>🖱️ Chế độ Chuột: Click trực tiếp vào 1 trong 2 đáp án hoặc dùng phím <strong>A</strong> / <strong>D</strong>.</span>
+                <span className="text-tertiary font-bold">Sẵn sàng!</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* THANH ĐIỀU HƯỚNG & NÚT BẮT ĐẦU */}
+      <div className="bg-surface-container-high/75 backdrop-blur-xl rounded-xl p-2 sm:p-2.5 border border-white/15 flex items-center justify-between gap-2 ppt-stagger-4 shrink-0">
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-surface-container-lowest/70 hover:bg-surface-container-lowest text-on-surface-variant hover:text-on-surface transition-all cursor-pointer border border-white/10 text-body-sm font-semibold"
+          className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-lowest/70 hover:bg-surface-container-lowest text-on-surface-variant hover:text-on-surface transition-all cursor-pointer border border-white/10 text-xs font-semibold"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
           <span>Quay lại</span>
         </button>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {/* Huy hiệu hiển thị phương thức chơi đã chọn ở Bước 1 */}
-          <div className="flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2 rounded-xl bg-surface-container-lowest/80 border border-white/10 text-on-surface-variant text-body-sm">
-            <span className="text-[11px] sm:text-label-caps text-outline uppercase font-semibold">Chế độ chơi:</span>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-container-lowest/80 border border-white/10 text-on-surface-variant text-xs font-semibold">
+            <span className="text-outline uppercase text-[10px]">Chế độ:</span>
             <span
-              className={`font-black flex items-center gap-1 text-body-sm sm:text-body-base ${
+              className={`font-black flex items-center gap-1 ${
                 controlMode === 'ar' ? 'text-tertiary' : 'text-primary'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <span className="material-symbols-outlined text-[15px]">
                 {controlMode === 'ar' ? 'videocam' : 'mouse'}
               </span>
-              {controlMode === 'ar' ? 'Camera AR (Tay & Mặt)' : 'Click Chuột'}
+              {controlMode === 'ar' ? 'Camera AR' : 'Chuột'}
             </span>
           </div>
 
@@ -1083,11 +1143,11 @@ function GuidePage({
           <button
             type="button"
             onClick={() => onStartGame(controlMode)}
-            className="pinch-host px-6 sm:px-9 py-3 rounded-xl font-black text-body-base sm:text-headline-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] shadow-[0_8px_25px_rgba(23,219,229,0.45)] hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer uppercase tracking-wide"
+            className="pinch-host px-5 sm:px-7 py-2 sm:py-2.5 rounded-xl font-black text-xs sm:text-body-sm flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] shadow-[0_6px_20px_rgba(23,219,229,0.45)] hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer uppercase tracking-wider"
           >
             <PinchMark live />
             <span>BẮT ĐẦU</span>
-            <span className="material-symbols-outlined text-[22px]">play_arrow</span>
+            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
           </button>
         </div>
       </div>
@@ -1117,7 +1177,9 @@ function GameplayPage({
     correct: boolean;
     message: string;
     sourceLabel: string;
+    isTimeout?: boolean;
   } | null>(null);
+  const [pedagogicalPopupOpen, setPedagogicalPopupOpen] = useState(false);
 
   const [humanScore, setHumanScore] = useState(150);
   const [aiScore, setAiScore] = useState(100);
@@ -1157,6 +1219,7 @@ function GameplayPage({
     setHoverProgress(0);
     setLocked(false);
     setFeedback(null);
+    setPedagogicalPopupOpen(false);
     setArenaShake(null);
     setRoundCountdown(3);
     audio.playRoundCountdown(3);
@@ -1243,6 +1306,8 @@ function GameplayPage({
       questionIndex: qIndex + 1,
       question: currentQ.question,
       topic: currentQ.topic,
+      toolName: currentQ.toolName,
+      image: currentQ.image,
       userChoice: choiceSide,
       userChoiceText,
       correctSide: currentQ.hasAI ? 'RIGHT' : 'LEFT',
@@ -1274,6 +1339,7 @@ function GameplayPage({
       setLoseStreak(0);
       setMaxWinStreak((m) => Math.max(m, nextWin));
       setArenaShake('win');
+      window.setTimeout(() => setArenaShake(null), 650);
       audio.setIntensity(isWinStreak ? Math.min(1, 0.55 + (nextWin - 2) * 0.15) : 0.42);
       audio.playPullSuccess(nextWin);
 
@@ -1307,6 +1373,7 @@ function GameplayPage({
           ? `CHUỖI THẮNG x${nextWin}! Kéo mạnh +${pullDelta}m (+${gainedPts} PTS gồm +${comboBonusPts} thưởng Streak)`
           : `CHÍNH XÁC! Đội Con Người kéo dây thêm +${pullDelta}m (+${gainedPts} PTS)`,
         sourceLabel,
+        isTimeout: false,
       });
     } else {
       const nextLose = loseStreak + 1;
@@ -1319,6 +1386,7 @@ function GameplayPage({
       setLoseStreak(nextLose);
       setWinStreak(0);
       setArenaShake('lose');
+      window.setTimeout(() => setArenaShake(null), 650);
       audio.setIntensity(isLoseStreak ? Math.min(1, 0.65 + (nextLose - 2) * 0.15) : 0.45);
       audio.playPullFail(nextLose);
 
@@ -1346,12 +1414,19 @@ function GameplayPage({
           ? `HẾT GIỜ! Đội AI kéo dây lùi -${aiPullDelta}m`
           : `CHƯA CHÍNH XÁC! Đội AI phản công kéo dây -${aiPullDelta}m`,
         sourceLabel,
+        isTimeout: choiceSide === null,
       });
     }
+
+    // Mở PopUp giải nghĩa sư phạm sau 450ms (để người chơi kịp nhìn hiệu ứng giật dây kéo co sống động)
+    window.setTimeout(() => {
+      setPedagogicalPopupOpen(true);
+    }, 450);
   };
 
   const handleNextQuestion = () => {
     audio.playClick();
+    setPedagogicalPopupOpen(false);
     if (qIndex + 1 < questions.length) {
       setQIndex((i) => i + 1);
     } else {
@@ -1381,24 +1456,54 @@ function GameplayPage({
     }
   };
 
+  // Phím tắt bàn phím: Chuyển câu khi mở PopUp Sư phạm (Enter / Phím cách / Mũi tên phải)
+  useEffect(() => {
+    if (!pedagogicalPopupOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setPedagogicalPopupOpen(false);
+        handleNextQuestion();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pedagogicalPopupOpen]);
+
+  // Phím tắt bàn phím: Chọn Trái (A/Left) hoặc Phải (D/Right) khi chơi chuột/phím
+  useEffect(() => {
+    if (locked || roundCountdown !== null || pedagogicalPopupOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        handleLockAnswer('LEFT', 'mouse');
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        handleLockAnswer('RIGHT', 'mouse');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [locked, roundCountdown, pedagogicalPopupOpen, qIndex]);
+
   // Không tự động nhảy câu hỏi - chờ người dùng bấm nút "CÂU TIẾP THEO" để có thời gian đọc giải thích sư phạm
   const humanBarPercent = Math.max(15, Math.min(85, Math.round(50 + (ropeMeters / 8) * 38)));
   const ribbonTranslatePx = Math.round(-(ropeMeters / 8) * 165);
 
   return (
-    <div className="relative flex flex-col w-full gap-4 select-none ppt-page-enter">
+    <div className="relative flex flex-col w-full h-full max-h-full justify-between gap-1.5 sm:gap-2 select-none ppt-page-enter">
       {/* OVERLAY ĐẾM NGƯỢC 3, 2, 1 TRƯỚC KHI BẮT ĐẦU CHƠI HOẶC QUA CÂU MỚI */}
       {roundCountdown !== null && (
         <div
-          className="fixed inset-0 z-[75] flex items-center justify-center bg-[#060913]/80 backdrop-blur-md p-4"
+          className="fixed inset-0 z-[75] flex items-center justify-center bg-[#060913]/85 backdrop-blur-md p-4"
           role="status"
           aria-live="assertive"
         >
-          <div className="relative w-full max-w-lg rounded-3xl bg-surface-container-low/95 border-2 border-tertiary/50 shadow-[0_0_60px_rgba(23,219,229,0.35)] p-6 sm:p-8 flex flex-col items-center text-center gap-4 overflow-hidden">
+          <div className="relative w-full max-w-lg rounded-3xl bg-surface-container-low/95 border-2 border-tertiary/50 shadow-[0_0_60px_rgba(23,219,229,0.35)] p-5 sm:p-7 flex flex-col items-center text-center gap-3.5 overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(23,219,229,0.22),transparent_70%)] pointer-events-none" />
 
             {/* Badge trạng thái trận đấu / câu hỏi */}
-            <div className="relative z-10 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container/40 border border-primary/40 text-primary text-label-caps uppercase">
+            <div className="relative z-10 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary-container/40 border border-primary/40 text-primary text-label-caps uppercase">
               <span className="w-2 h-2 rounded-full bg-tertiary animate-ping" />
               <span>
                 {qIndex === 0
@@ -1411,29 +1516,29 @@ function GameplayPage({
 
             {/* Chủ đề câu hỏi sắp tới */}
             <div className="relative z-10 flex flex-col gap-1">
-              <span className="text-label-kicker text-tertiary uppercase">{currentQ.topic}</span>
-              <p className="text-body-base sm:text-body-lg text-on-surface font-bold line-clamp-2 max-w-md">
+              <span className="text-label-kicker text-tertiary uppercase font-bold">{currentQ.topic}</span>
+              <p className="text-body-sm sm:text-body-base text-on-surface font-bold line-clamp-2 max-w-md">
                 {currentQ.question}
               </p>
             </div>
 
-            {/* Số đếm ngược 3 - 2 - 1 cỡ lớn với hiệu ứng Pop & Vòng sáng */}
-            <div className="relative z-10 my-2 w-36 h-36 sm:w-40 sm:h-40 rounded-full bg-surface-container-lowest/90 border-4 border-tertiary shadow-[0_0_45px_rgba(23,219,229,0.55)] flex items-center justify-center">
+            {/* Số đếm ngược 3 - 2 - 1 cỡ lớn */}
+            <div className="relative z-10 my-1 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-surface-container-lowest/90 border-4 border-tertiary shadow-[0_0_40px_rgba(23,219,229,0.55)] flex items-center justify-center">
               <div className="absolute inset-0 rounded-full border-2 border-tertiary/40 animate-ping pointer-events-none" />
               <span
                 key={roundCountdown}
-                className="countdown-digit-anim font-metric-display text-[84px] sm:text-[96px] leading-none font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-tertiary-fixed to-tertiary"
+                className="countdown-digit-anim font-metric-display text-[72px] sm:text-[80px] leading-none font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-tertiary-fixed to-tertiary"
               >
                 {roundCountdown}
               </span>
             </div>
 
             {/* Hướng dẫn ngắn theo chế độ đã chọn */}
-            <div className="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-container-high/80 border border-white/10 text-body-sm text-on-surface-variant">
+            <div className="relative z-10 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-surface-container-high/80 border border-white/10 text-xs sm:text-body-sm text-on-surface-variant">
               <img
                 src={BRAND_MASCOTS.welcomeAnimated}
                 alt="Mana"
-                className="w-7 h-7 object-contain shrink-0"
+                className="w-6 h-6 object-contain shrink-0"
               />
               <span>
                 {isArMode
@@ -1445,507 +1550,424 @@ function GameplayPage({
         </div>
       )}
 
-      {/* TẦNG 1: THANH HUD TỈ SỐ & HOẠT CẢNH SÂN KHẤU KÉO CO SỐNG ĐỘNG */}
+      {/* KHUNG ĐẤU TRƯỜNG TOÀN DIỆN: BỌC TOÀN BỘ CÁC COMPONENT TRONG 1 KHUNG DUY NHẤT */}
       <section
-        className={`w-full bg-surface-container-low/90 backdrop-blur-xl rounded-xl sm:rounded-2xl p-2 sm:p-3.5 shadow-xl flex flex-col gap-2 sm:gap-2.5 border transition-colors ${
+        className={`w-full h-full max-h-full bg-surface-container-low/95 backdrop-blur-xl rounded-2xl p-2.5 sm:p-3.5 shadow-2xl flex flex-col justify-between gap-2 border transition-colors overflow-hidden ${
           arenaShake === 'win'
             ? 'arena-shake-win border-emerald-400/60'
             : arenaShake === 'lose'
             ? 'arena-shake-lose border-error/60'
             : timeLeft <= 5 && !locked
-            ? 'border-error/70 shadow-[0_0_24px_rgba(255,180,171,0.28)]'
+            ? 'border-error/70 shadow-[0_0_20px_rgba(255,180,171,0.28)]'
             : 'border-white/10'
         }`}
       >
-        {/* MOBILE COMPACT HUD (< md): 1 DÒNG TỐI GIẢN KHÔNG GÂY SCROLL */}
-        <div className="flex md:hidden items-center justify-between gap-1 bg-surface-container-high/90 rounded-lg px-2 py-1.5 border border-white/10">
+        {/* HÀNG 1: HUD TỈ SỐ & ĐỒNG HỒ ĐẾM NGƯỢC */}
+        <div className="flex items-center justify-between gap-2 px-1 shrink-0">
           {/* Đội Con Người */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <img
               src={BRAND_MASCOTS.welcomeAnimated}
               alt="Người"
-              className="w-6 h-6 object-contain rounded bg-primary-container/30 p-0.5 shrink-0"
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-xl bg-primary-container/30 p-1 shrink-0"
             />
             <div className="flex flex-col">
-              <span className="text-[8.5px] text-tertiary font-bold leading-none">NGƯỜI</span>
-              <span className="text-xs font-black text-tertiary font-mono leading-none mt-0.5">
-                {humanScore}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-[9.5px] sm:text-[10.5px] text-tertiary font-black uppercase tracking-wider">
+                  ĐỘI NGƯỜI
+                </span>
+                {winStreak >= 3 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-black bg-emerald-400 text-[#032117]">
+                    🔥 x{winStreak}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-1 font-mono">
+                <span className="text-sm sm:text-base font-black text-tertiary leading-none">{humanScore}</span>
+                <span className="text-[9px] text-tertiary/75 font-bold">PTS</span>
+                <span className="text-[10px] text-tertiary font-bold ml-1">
+                  ({ropeMeters >= 0 ? `+${ropeMeters}m` : `${ropeMeters}m`})
+                </span>
+              </div>
             </div>
-            <span className="text-[8.5px] text-tertiary font-bold ml-0.5 font-mono">
-              {ropeMeters >= 0 ? `+${ropeMeters}m` : `${ropeMeters}m`}
-            </span>
-            {winStreak >= 3 && (
-              <span className="px-1 py-0.2 rounded text-[7.5px] font-black bg-emerald-400 text-[#032117]">
-                x{winStreak}
-              </span>
-            )}
           </div>
 
-          {/* Giữa: Tiến độ & Đồng hồ */}
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8.5px] text-on-surface-variant font-bold font-mono">
-                CÂU {qIndex + 1}/{questions.length}
-              </span>
+          {/* Vạch Trung Tâm: Tiến Độ & Đồng Hồ Đếm Ngược */}
+          <div className="flex flex-col items-center gap-0.5 px-2 flex-1 max-w-xs sm:max-w-sm">
+            <div className="flex items-center justify-between w-full text-[9.5px] font-bold">
+              <span className="text-tertiary font-mono">CÂU {qIndex + 1}/{questions.length}</span>
               <div
-                className={`flex items-center gap-0.5 px-1.5 py-0.2 rounded-full border text-[9px] font-bold ${
+                className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10.5px] font-black font-mono transition-all ${
                   timeLeft <= 5 && !locked
                     ? 'bg-error-container text-error border-error animate-bounce'
                     : 'bg-surface-container-lowest text-tertiary border-tertiary/40'
                 }`}
               >
-                <span className="font-mono">{timeLeft}s</span>
+                <span className="material-symbols-outlined text-[14px]">timer</span>
+                <span>{timeLeft}s</span>
               </div>
             </div>
-            <div className="w-16 h-1.5 bg-surface-container-lowest rounded-full overflow-hidden flex relative border border-white/10">
-              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60 -translate-x-1/2 z-10" />
+
+            {/* Thanh Kéo Co Cân Bằng */}
+            <div className="w-full h-2.5 bg-surface-container-lowest rounded-full p-0.5 relative overflow-hidden flex items-center border border-white/10">
+              <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/70 -translate-x-1/2 z-10" />
               <div
-                className="h-full bg-gradient-to-r from-emerald-400 via-tertiary to-primary-container rounded-full transition-all duration-300"
+                className="h-full bg-gradient-to-r from-emerald-400 via-tertiary to-primary-container rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(23,219,229,0.5)]"
                 style={{ width: `${humanBarPercent}%` }}
               />
             </div>
           </div>
 
           {/* Đội AI */}
-          <div className="flex items-center gap-1.5 min-w-0 justify-end">
-            {loseStreak >= 3 && (
-              <span className="px-1 py-0.2 rounded text-[7.5px] font-black bg-rose-500 text-white">
-                x{loseStreak}
-              </span>
-            )}
+          <div className="flex items-center gap-2 min-w-0 justify-end">
             <div className="flex flex-col text-right">
-              <span className="text-[8.5px] text-secondary font-bold leading-none">AI BOT</span>
-              <span className="text-xs font-black text-secondary font-mono leading-none mt-0.5">
-                {aiScore}
-              </span>
+              <div className="flex items-center justify-end gap-1">
+                {loseStreak >= 3 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-black bg-rose-500 text-white">
+                    ⚡ x{loseStreak}
+                  </span>
+                )}
+                <span className="text-[9.5px] sm:text-[10.5px] text-secondary font-black uppercase tracking-wider">
+                  ĐỘI AI BOTS
+                </span>
+              </div>
+              <div className="flex items-baseline justify-end gap-1 font-mono">
+                <span className="text-sm sm:text-base font-black text-secondary leading-none">{aiScore}</span>
+                <span className="text-[9px] text-secondary/75 font-bold">PTS</span>
+              </div>
             </div>
             <img
               src={BRAND_MASCOTS.aiAssistant3d}
               alt="AI"
-              className="w-6 h-6 object-contain rounded bg-secondary-container/40 p-0.5 shrink-0"
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-xl bg-secondary-container/40 p-1 shrink-0"
             />
-          </div>
-        </div>
-
-        {/* DESKTOP FULL HUD (>= md) */}
-        <div className="hidden md:grid grid-cols-12 gap-3 items-center">
-          {/* Đội Con Người */}
-          <div
-            className={`col-span-4 flex items-center justify-between bg-surface-container-high/90 rounded-xl p-2.5 px-3.5 border transition-all ${
-              winStreak >= 3
-                ? 'border-emerald-400/70 shadow-[0_0_20px_rgba(16,185,129,0.28)]'
-                : 'border-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <img
-                src={BRAND_MASCOTS.welcomeAnimated}
-                alt="Mana"
-                className="w-9 h-9 object-contain rounded-lg bg-primary-container/30 p-0.5"
-              />
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1">
-                  <span className="text-label-kicker text-tertiary uppercase text-[10px]">
-                    ĐỘI CON NGƯỜI
-                  </span>
-                  {winStreak >= 3 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase bg-emerald-400 text-[#032117]">
-                      🔥 x{winStreak}
-                    </span>
-                  )}
-                </div>
-                <span className="text-body-sm text-on-surface font-bold">Giáo viên & Học sinh</span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end">
-              <div className="flex items-baseline gap-1">
-                <span className="text-metric-display text-tertiary">{humanScore}</span>
-                <span className="text-[10px] text-tertiary/80">PTS</span>
-              </div>
-              <span className="text-[10px] text-tertiary font-bold">
-                {ropeMeters >= 0 ? `+${ropeMeters}M` : `${ropeMeters}M`}
-              </span>
-            </div>
-          </div>
-
-          {/* Giữa: Tiến độ câu & Thanh kéo co */}
-          <div className="col-span-4 flex flex-col items-center justify-center gap-1 px-2">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-                <span className="text-label-caps text-tertiary uppercase text-[10px]">
-                  CÂU {String(qIndex + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}
-                </span>
-              </div>
-
-              {/* Đồng hồ đếm ngược nổi bật */}
-              <div
-                className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border transition-all ${
-                  timeLeft <= 5 && !locked
-                    ? 'bg-error-container/70 border-error text-error animate-bounce shadow-[0_0_14px_rgba(255,180,171,0.65)]'
-                    : 'bg-surface-container-lowest border-tertiary/40 text-tertiary'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[14px]">timer</span>
-                <span className="text-metric-clock text-[17px]">{timeLeft}s</span>
-              </div>
-            </div>
-
-            <div className="w-full flex flex-col gap-0.5">
-              <div className="h-2.5 w-full bg-surface-container-lowest rounded-full p-0.5 relative overflow-hidden flex items-center border border-white/10">
-                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60 -translate-x-1/2 z-10" />
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-400 via-tertiary to-primary-container rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(23,219,229,0.6)]"
-                  style={{ width: `${humanBarPercent}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-on-surface-variant text-[9px]">
-                <span className="text-tertiary font-bold">◄ NGƯỜI</span>
-                <span>VẠCH TÂM 0.0m</span>
-                <span className="text-secondary font-bold">AI ►</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Đội AI */}
-          <div
-            className={`col-span-4 flex items-center justify-between bg-surface-container-high/90 rounded-xl p-2.5 px-3.5 border transition-all ${
-              loseStreak >= 3
-                ? 'border-error/70 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
-                : 'border-white/5'
-            }`}
-          >
-            <div className="flex flex-col items-start">
-              <div className="flex items-baseline gap-1">
-                <span className="text-metric-display text-secondary">{aiScore}</span>
-                <span className="text-[10px] text-secondary/80">PTS</span>
-              </div>
-              <span className="text-[10px] text-on-surface-variant">THÁCH ĐẤU</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col text-right">
-                <div className="flex items-center justify-end gap-1">
-                  {loseStreak >= 3 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase bg-rose-500 text-white">
-                      ⚡ x{loseStreak}
-                    </span>
-                  )}
-                  <span className="text-label-kicker text-secondary uppercase text-[10px]">
-                    ĐỘI TRÍ TUỆ NHÂN TẠO
-                  </span>
-                </div>
-                <span className="text-body-sm text-on-surface font-bold">AI Core Bots</span>
-              </div>
-              <img
-                src={BRAND_MASCOTS.aiAssistant3d}
-                alt="AI Bot"
-                className="w-9 h-9 object-contain rounded-lg bg-secondary-container/40 p-0.5"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SÂN KHẤU HOẠT CẢNH KÉO CO RUNG LẮC & DI CHUYỂN VỊ TRÍ TRỰC QUAN (CO GIÃN THEO THIẾT BỊ) */}
-        <div className="relative min-h-[105px] sm:min-h-[140px] md:min-h-[165px] rounded-xl bg-surface-container-lowest overflow-hidden flex flex-col justify-between px-2 sm:px-6 py-1.5 sm:py-2.5 shadow-inner border border-white/10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_55%_at_50%_75%,rgba(57,90,210,0.2),rgba(9,14,28,0))] pointer-events-none" />
-
-          {/* BANNER NỔ HIỆU ỨNG STREAK THẮNG / THUA TRÊN SÂN KHẤU */}
-          {streakCallout && (
-            <div
-              key={streakCallout.id}
-              className="streak-callout-banner w-[92%] max-w-sm"
-            >
-              <div
-                className={`rounded-xl px-3 py-1.5 border shadow-xl backdrop-blur-xl flex items-center gap-2 ${
-                  streakCallout.type === 'win'
-                    ? 'bg-emerald-950/90 border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.55)]'
-                    : 'bg-rose-950/90 border-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.55)]'
-                }`}
-              >
-                <div
-                  className={`px-2 py-0.5 rounded-lg font-black text-[9px] shrink-0 ${
-                    streakCallout.type === 'win'
-                      ? 'bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117]'
-                      : 'bg-gradient-to-r from-amber-400 to-rose-500 text-white'
-                  }`}
-                >
-                  {streakCallout.badge}
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs sm:text-body-sm font-black text-white truncate">
-                    {streakCallout.title}
-                  </span>
-                  <span className="text-[10px] text-on-surface-variant truncate">
-                    {streakCallout.subtitle}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Thanh thước đo sân kéo co */}
-          <div className="relative z-20 flex items-center justify-between text-[8.5px] sm:text-label-kicker uppercase px-1">
-            <span className="text-tertiary font-black flex items-center gap-1">
-              <span>◄ SÂN NGƯỜI</span>
-            </span>
-
-            <span className="px-2 py-0.2 rounded-full bg-error-container/50 border border-error/50 text-error font-bold text-[8px] sm:text-[9.5px]">
-              {ropeMeters > 0
-                ? `NGƯỜI KÉO +${ropeMeters}M`
-                : ropeMeters < 0
-                ? `AI KÉO ${Math.abs(ropeMeters)}M`
-                : 'VẠCH TÂM 0.0M'}
-            </span>
-
-            <span className="text-secondary font-black flex items-center gap-1">
-              <span>SÂN AI ►</span>
-            </span>
-          </div>
-
-          {/* Vạch laser trung tâm cố định 0.0m */}
-          <div className="absolute inset-y-4 left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-error/75 z-10 pointer-events-none" />
-
-          {/* HOẠT CẢNH ĐỘI KÉO CO RUNG LẮC & DỊCH CHUYỂN */}
-          <div className="relative z-20 flex-1 flex items-center justify-center overflow-visible py-0.5">
-            <div
-              className="transition-transform duration-500 ease-out flex items-center justify-center"
-              style={{ transform: `translateX(${ribbonTranslatePx}px)` }}
-            >
-              <div
-                className={
-                  locked
-                    ? feedback?.correct
-                      ? 'tug-scene-jerk-left'
-                      : 'tug-scene-jerk-right'
-                    : ''
-                }
-              >
-                <img
-                  src={BRAND_MASCOTS.tugOfWarScene}
-                  alt="Hoạt cảnh Kéo co"
-                  className={`h-20 sm:h-28 md:h-36 w-auto max-w-none object-contain tug-scene-live ${
-                    winStreak >= 3
-                      ? 'drop-shadow-[0_8px_20px_rgba(16,185,129,0.75)]'
-                      : loseStreak >= 3
-                      ? 'drop-shadow-[0_8px_20px_rgba(244,63,94,0.75)]'
-                      : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]'
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* TẦNG 2: CÂU HỎI LỚN & KHUNG TƯƠNG TÁC (TỐI ƯU MOBILE FIRST) */}
-      <section className="w-full bg-surface-container/85 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 shadow-2xl flex flex-col gap-2.5 sm:gap-3 border border-white/10">
-        {/* Thông tin Công cụ & Hướng dẫn ngắn */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-primary-container/30 text-primary text-[10px] sm:text-label-caps uppercase font-bold">
-            <span className="material-symbols-outlined text-[14px]">handyman</span>
-            <span>{currentQ.topic}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] sm:text-body-sm text-on-surface-variant font-semibold">
-              {isArMode
-                ? '✋ Vẫy tay/nghiêng mặt Trái (Không AI) / Phải (Có AI)'
-                : '🖱️ Click chọn đáp án bên dưới'}
-            </span>
-
-            {/* Nút nhỏ popup xem lại hướng dẫn chơi */}
+            {/* Nút nhỏ popup xem lại hướng dẫn */}
             <button
               type="button"
               onClick={() => {
                 audio.playClick();
                 setGuideModalOpen(true);
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-tertiary hover:text-white border border-tertiary/40 hover:border-tertiary text-[10px] sm:text-[11px] font-bold uppercase transition-all cursor-pointer shadow-sm"
+              className="ml-1 w-8 h-8 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-tertiary hover:text-white border border-tertiary/30 hover:border-tertiary flex items-center justify-center transition-all cursor-pointer shadow-sm"
               title="Xem lại hướng dẫn cách chơi"
             >
-              <span className="material-symbols-outlined text-[14px] sm:text-[15px]">help_outline</span>
-              <span>Hướng dẫn</span>
+              <span className="material-symbols-outlined text-[16px]">help_outline</span>
             </button>
           </div>
         </div>
 
-        {/* Câu hỏi chữ gọn gàng, độ tương phản cao */}
-        <div className="bg-surface-container-lowest/85 rounded-xl p-3 sm:p-4 shadow-inner border border-white/10">
-          <h2 className="text-sm sm:text-base md:text-headline-md text-white font-bold leading-snug">
-            {currentQ.question}
-          </h2>
+        {/* HÀNG 2: SÂN KÉO CO PHÓNG TO RÕ NÉT (MỞ RỘNG DIỆN TÍCH, KHÔNG BỊ CO NHỎ) */}
+        <div className="relative flex-1 min-h-[140px] max-h-[220px] rounded-xl bg-surface-container-lowest/80 overflow-hidden flex items-center justify-center px-2 sm:px-4 py-1.5 shadow-inner border border-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_75%,rgba(57,90,210,0.25),transparent)] pointer-events-none" />
+
+          {/* Nhãn Sân Người & Sân AI cố định ở mép trên */}
+          <div className="absolute top-2 left-3 z-20 text-[9px] sm:text-[10.5px] font-black text-tertiary uppercase tracking-wider bg-surface-container-high/80 px-2.5 py-0.5 rounded-full border border-white/10 shadow-sm">
+            ◄ SÂN NGƯỜI
+          </div>
+
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 px-3 py-0.5 rounded-full bg-surface-container-high/90 border border-white/15 text-on-surface font-mono text-[10px] sm:text-xs font-bold shadow-md">
+            {ropeMeters > 0
+              ? `NGƯỜI +${ropeMeters}M`
+              : ropeMeters < 0
+              ? `AI ${Math.abs(ropeMeters)}M`
+              : 'VẠCH TÂM 0.0M'}
+          </div>
+
+          <div className="absolute top-2 right-3 z-20 text-[9px] sm:text-[10.5px] font-black text-secondary uppercase tracking-wider bg-surface-container-high/80 px-2.5 py-0.5 rounded-full border border-white/10 shadow-sm">
+            SÂN AI ►
+          </div>
+
+          {/* Vạch laser đỏ cố định 0.0m */}
+          <div className="absolute inset-y-2 left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-error/75 z-10 pointer-events-none" />
+
+          {/* Nhân vật kéo co phóng to rõ nét, rung lắc kéo dây sống động */}
+          <div className="relative z-20 w-full h-full flex items-center justify-center overflow-visible pointer-events-none">
+            <div
+              className="transition-transform duration-500 ease-out flex items-center justify-center"
+              style={{ transform: `translateX(${ribbonTranslatePx}px)` }}
+            >
+              <div
+                key={locked ? `jerk-${feedback?.correct ? 'win' : 'lose'}-${qIndex}` : `live-${qIndex}`}
+                className={
+                  locked
+                    ? feedback?.correct
+                      ? 'tug-scene-jerk-left'
+                      : 'tug-scene-jerk-right'
+                    : 'tug-scene-live'
+                }
+              >
+                <img
+                  src={BRAND_MASCOTS.tugOfWarScene}
+                  alt="Hoạt cảnh Kéo co"
+                  className="h-28 sm:h-36 md:h-44 max-h-full w-auto max-w-none object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* NẾU CHỌN CHẾ ĐỘ AR: HIỂN THỊ KHUNG CAMERA AR BÊN DƯỚI */}
-        {isArMode ? (
-          <ARGestureTracker
-            enabled={true}
-            locked={locked || roundCountdown !== null}
-            descNoAI={currentQ.descNoAI}
-            descHasAI={currentQ.descHasAI}
-            selectedSide={selectedSide}
-            hasAI={currentQ.hasAI}
-            onSelectSide={(side, source) => handleLockAnswer(side, source)}
-          />
-        ) : (
-          /* NẾU CHỌN CHẾ ĐỘ CHUỘT: HIỂN THỊ 2 NÚT ĐÁP ÁN */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3.5" role="radiogroup">
-            {/* NÚT 1: KHÔNG CÓ AI */}
-            <button
-              type="button"
-              disabled={locked || roundCountdown !== null}
-              onClick={() => handleLockAnswer('LEFT', 'mouse')}
-              className={`lux-card group text-left relative rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 flex flex-col justify-between gap-1.5 sm:gap-2.5 cursor-pointer border-2 overflow-hidden ${
-                selectedSide === 'LEFT'
-                  ? !currentQ.hasAI
-                    ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.45)]'
-                    : 'bg-error-container/40 border-error shadow-[0_0_20px_rgba(255,180,171,0.4)]'
-                  : hoverSide === 'LEFT'
-                  ? 'bg-surface-container-highest border-tertiary shadow-[0_0_20px_rgba(23,219,229,0.35)] scale-[1.01]'
-                  : 'bg-surface-container-high/65 hover:bg-surface-container-highest border-white/15 hover:border-white/35'
-              }`}
-            >
-              {hoverSide === 'LEFT' && !locked && (
-                <div
-                  className="absolute bottom-0 left-0 h-1.5 bg-tertiary transition-all duration-100"
-                  style={{ width: `${hoverProgress}%` }}
-                />
-              )}
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm sm:text-base md:text-headline-md text-white font-black group-hover:text-tertiary transition-colors">
-                  KHÔNG CÓ AI
-                </span>
-
-                {hoverSide === 'LEFT' && !locked ? (
-                  <span className="px-2 py-0.5 rounded-full bg-tertiary/20 text-tertiary text-[9.5px]">
-                    {hoverSource === 'hand' ? '✋ Tay' : '😊 Mặt'} {hoverProgress}%
-                  </span>
-                ) : (
-                  <div
-                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
-                      selectedSide === 'LEFT'
-                        ? !currentQ.hasAI
-                          ? 'bg-emerald-400 text-[#032117]'
-                          : 'bg-error text-on-error'
-                        : 'bg-surface-variant text-on-surface-variant'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px] sm:text-[18px] font-bold">
-                      {selectedSide === 'LEFT'
-                        ? !currentQ.hasAI
-                          ? 'check'
-                          : 'close'
-                        : 'radio_button_unchecked'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs sm:text-body-sm text-on-surface leading-snug">
-                {currentQ.descNoAI}
-              </p>
-            </button>
-
-            {/* NÚT 2: CÓ SỬ DỤNG AI */}
-            <button
-              type="button"
-              disabled={locked || roundCountdown !== null}
-              onClick={() => handleLockAnswer('RIGHT', 'mouse')}
-              className={`lux-card group text-left relative rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 flex flex-col justify-between gap-1.5 sm:gap-2.5 cursor-pointer border-2 overflow-hidden ${
-                selectedSide === 'RIGHT'
-                  ? currentQ.hasAI
-                    ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.45)]'
-                    : 'bg-error-container/40 border-error shadow-[0_0_20px_rgba(255,180,171,0.4)]'
-                  : hoverSide === 'RIGHT'
-                  ? 'bg-surface-container-highest border-tertiary shadow-[0_0_20px_rgba(23,219,229,0.35)] scale-[1.01]'
-                  : 'bg-surface-container-high/65 hover:bg-surface-container-highest border-white/15 hover:border-white/35'
-              }`}
-            >
-              {hoverSide === 'RIGHT' && !locked && (
-                <div
-                  className="absolute bottom-0 left-0 h-1.5 bg-tertiary transition-all duration-100"
-                  style={{ width: `${hoverProgress}%` }}
-                />
-              )}
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm sm:text-base md:text-headline-md text-white font-black group-hover:text-tertiary transition-colors">
-                  CÓ SỬ DỤNG AI
-                </span>
-
-                {hoverSide === 'RIGHT' && !locked ? (
-                  <span className="px-2 py-0.5 rounded-full bg-tertiary/20 text-tertiary text-[9.5px]">
-                    {hoverSource === 'hand' ? '✋ Tay' : '😊 Mặt'} {hoverProgress}%
-                  </span>
-                ) : (
-                  <div
-                    className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
-                      selectedSide === 'RIGHT'
-                        ? currentQ.hasAI
-                          ? 'bg-emerald-400 text-[#032117]'
-                          : 'bg-error text-on-error'
-                        : 'bg-surface-variant text-on-surface-variant'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px] sm:text-[18px] font-bold">
-                      {selectedSide === 'RIGHT'
-                        ? currentQ.hasAI
-                          ? 'check'
-                          : 'close'
-                        : 'radio_button_unchecked'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs sm:text-body-sm text-on-surface leading-snug">
-                {currentQ.descHasAI}
-              </p>
-            </button>
+        {/* HÀNG 3: CÂU HỎI & ẢNH CÔNG CỤ 3D PHÓNG TO (BỌC TRỰC TIẾP TRONG KHUNG) */}
+        <div className="border-t border-white/10 pt-2 pb-1 flex items-center gap-3 sm:gap-4 shrink-0">
+          {/* Ảnh 3D công cụ phóng to rõ nét */}
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 shrink-0 flex items-center justify-center group">
+            <div className="absolute inset-1.5 bg-tertiary/20 rounded-full blur-xl pointer-events-none" />
+            <img
+              src={currentQ.image}
+              alt={currentQ.toolName}
+              className="w-full h-full object-contain relative z-10 filter drop-shadow-[0_6px_20px_rgba(0,0,0,0.65)] group-hover:scale-105 transition-transform"
+            />
           </div>
-        )}
 
-        {/* HỘP GIẢI THÍCH SƯ PHẠM & NÚT BẤM CÂU TIẾP THEO (HIỂN THỊ CẢ CHẾ ĐỘ CHUỘT LẪN AR, KHÔNG TỰ NHẢY CÂU) */}
-        {locked && (
-          <div className="bg-surface-container-lowest/95 rounded-xl sm:rounded-2xl p-3 sm:p-4.5 flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4 border-2 border-tertiary/40 shadow-[0_0_30px_rgba(23,219,229,0.2)] ppt-page-enter">
-            <div className="flex items-start gap-2.5 sm:gap-3.5 max-w-3xl">
-              <img
-                src={feedback?.correct ? BRAND_MASCOTS.actionAnimated : BRAND_MASCOTS.giangGiai}
-                alt="Mana Insight"
-                className="w-10 h-10 sm:w-13 sm:h-13 object-contain shrink-0 drop-shadow-[0_4px_10px_rgba(23,219,229,0.35)]"
+          {/* Tiêu đề công cụ & Nội dung câu hỏi */}
+          <div className="flex flex-col min-w-0 flex-1 justify-center gap-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-primary-container/50 border border-primary/40 text-primary text-[10px] sm:text-xs font-black uppercase tracking-wider">
+                CÔNG CỤ {qIndex + 1}/{questions.length}: {currentQ.toolName}
+              </span>
+            </div>
+            <h2 className="text-xs sm:text-sm md:text-base lg:text-lg text-white font-bold leading-snug line-clamp-2">
+              {currentQ.question}
+            </h2>
+          </div>
+        </div>
+
+        {/* HÀNG 4: KHU VỰC TƯƠNG TÁC ĐÁP ÁN (BỌC CHUNG TRONG KHUNG - CHUỘT HOẶC AR, ĐÃ BỎ DESC) */}
+        <div className="flex-1 min-h-0 flex flex-col justify-center">
+          {isArMode ? (
+            <div className="w-full h-full min-h-[170px] max-h-[250px]">
+              <ARGestureTracker
+                enabled={true}
+                mode="quiz"
+                hideCamera={true}
+                locked={locked || roundCountdown !== null}
+                selectedSide={selectedSide}
+                hasAI={currentQ.hasAI}
+                onSelectSide={(side, source) => handleLockAnswer(side, source)}
               />
-              <div className="flex flex-col gap-0.5 sm:gap-1">
-                <span
-                  className={`text-[10px] sm:text-label-caps uppercase font-bold flex items-center gap-1.5 ${
-                    feedback?.correct ? 'text-emerald-400' : 'text-error'
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 h-full max-h-[85px] sm:max-h-[105px]" role="radiogroup">
+              {/* NÚT 1: KHÔNG CÓ AI (BÊN TRÁI - ĐÃ BỎ DESC) */}
+              <button
+                type="button"
+                disabled={locked || roundCountdown !== null}
+                onClick={() => handleLockAnswer('LEFT', 'mouse')}
+                className={`lux-card group text-left relative rounded-xl p-2.5 sm:p-3 transition-all duration-300 flex items-center justify-between gap-2.5 cursor-pointer border-2 overflow-hidden ${
+                  selectedSide === 'LEFT'
+                    ? !currentQ.hasAI
+                      ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.45)]'
+                      : 'bg-error-container/40 border-error shadow-[0_0_20px_rgba(255,180,171,0.4)]'
+                    : hoverSide === 'LEFT'
+                    ? 'bg-surface-container-highest border-tertiary shadow-[0_0_20px_rgba(23,219,229,0.35)] scale-[1.01]'
+                    : 'bg-surface-container-high/65 hover:bg-surface-container-highest border-white/15 hover:border-white/35'
+                }`}
+              >
+                {hoverSide === 'LEFT' && !locked && (
+                  <div
+                    className="absolute bottom-0 left-0 h-1 bg-tertiary transition-all duration-100"
+                    style={{ width: `${hoverProgress}%` }}
+                  />
+                )}
+
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-8 h-8 rounded-lg bg-surface-container-highest/80 flex items-center justify-center text-secondary font-black text-sm border border-white/10 shrink-0">
+                    👈
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs sm:text-base md:text-lg text-white font-black group-hover:text-tertiary transition-colors truncate">
+                      KHÔNG CÓ AI
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-on-surface-variant font-semibold truncate">
+                      Click chọn hoặc bấm phím A
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    selectedSide === 'LEFT'
+                      ? !currentQ.hasAI
+                        ? 'bg-emerald-400 text-[#032117]'
+                        : 'bg-error text-on-error'
+                      : 'bg-surface-variant text-on-surface-variant'
                   }`}
                 >
-                  <span className="w-2 h-2 rounded-full bg-current animate-ping" />
-                  {feedback?.message}
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px] font-bold">
+                    {selectedSide === 'LEFT'
+                      ? !currentQ.hasAI
+                        ? 'check'
+                        : 'close'
+                      : 'radio_button_unchecked'}
+                  </span>
+                </div>
+              </button>
+
+              {/* NÚT 2: CÓ SỬ DỤNG AI (BÊN PHẢI - ĐÃ BỎ DESC) */}
+              <button
+                type="button"
+                disabled={locked || roundCountdown !== null}
+                onClick={() => handleLockAnswer('RIGHT', 'mouse')}
+                className={`lux-card group text-right relative rounded-xl p-2.5 sm:p-3 transition-all duration-300 flex items-center justify-between gap-2.5 cursor-pointer border-2 overflow-hidden ${
+                  selectedSide === 'RIGHT'
+                    ? currentQ.hasAI
+                      ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.45)]'
+                      : 'bg-error-container/40 border-error shadow-[0_0_20px_rgba(255,180,171,0.4)]'
+                    : hoverSide === 'RIGHT'
+                    ? 'bg-surface-container-highest border-tertiary shadow-[0_0_20px_rgba(23,219,229,0.35)] scale-[1.01]'
+                    : 'bg-surface-container-high/65 hover:bg-surface-container-highest border-white/15 hover:border-white/35'
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    selectedSide === 'RIGHT'
+                      ? currentQ.hasAI
+                        ? 'bg-emerald-400 text-[#032117]'
+                        : 'bg-error text-on-error'
+                      : 'bg-surface-variant text-on-surface-variant'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px] font-bold">
+                    {selectedSide === 'RIGHT'
+                      ? currentQ.hasAI
+                        ? 'check'
+                        : 'close'
+                      : 'radio_button_unchecked'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 min-w-0 justify-end">
+                  <div className="flex flex-col min-w-0 text-right">
+                    <span className="text-xs sm:text-base md:text-lg text-white font-black group-hover:text-tertiary transition-colors truncate">
+                      CÓ SỬ DỤNG AI
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-on-surface-variant font-semibold truncate">
+                      Click chọn hoặc bấm phím D
+                    </span>
+                  </div>
+                  <span className="w-8 h-8 rounded-lg bg-surface-container-highest/80 flex items-center justify-center text-tertiary font-black text-sm border border-white/10 shrink-0">
+                    👉
+                  </span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* POPUP GIẢI THÍCH SƯ PHẠM SAU KHI TRẢ LỜI / HẾT THỜI GIAN THEO YÊU CẦU */}
+      {pedagogicalPopupOpen && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 ppt-page-enter"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative w-full max-w-2xl md:max-w-[720px] rounded-2xl bg-surface-container-lowest/95 border-2 border-tertiary/40 p-4 sm:p-5 md:p-6 shadow-[0_24px_70px_rgba(0,0,0,0.9)] flex flex-col gap-3.5 sm:gap-4 max-h-[94vh] overflow-y-auto">
+            {/* Banner trạng thái kết quả */}
+            <div
+              className={`p-3 sm:p-3.5 rounded-xl flex items-center justify-between gap-3 border ${
+                feedback?.correct
+                  ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300'
+                  : feedback?.isTimeout
+                  ? 'bg-amber-950/50 border-amber-500/50 text-amber-300'
+                  : 'bg-rose-950/50 border-rose-500/50 text-rose-300'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <span className="material-symbols-outlined text-[28px] sm:text-[34px] shrink-0">
+                  {feedback?.correct
+                    ? 'check_circle'
+                    : feedback?.isTimeout
+                    ? 'schedule'
+                    : 'cancel'}
                 </span>
-                <p className="text-xs sm:text-body-base text-on-surface leading-snug">
-                  <strong className="text-tertiary">Giải thích sư phạm: </strong>
-                  {currentQ.insight}
-                </p>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs sm:text-sm md:text-base font-black uppercase tracking-wide truncate">
+                    {feedback?.message}
+                  </span>
+                  <span className="text-[11px] sm:text-xs opacity-85">
+                    {feedback?.correct
+                      ? 'Đội Con Người kéo dây +1.8m (+150 PTS)'
+                      : 'Đội AI phản công kéo dây -1.5m'}
+                  </span>
+                </div>
+              </div>
+              <img
+                src={feedback?.correct ? BRAND_MASCOTS.actionAnimated : BRAND_MASCOTS.giangGiai}
+                alt="Mana Mascot"
+                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain shrink-0"
+              />
+            </div>
+
+            {/* Thẻ Công cụ & Phân tích bản chất AI */}
+            <div className="p-3 sm:p-3.5 rounded-xl bg-surface-container-high/60 border border-white/10 flex items-center gap-3 sm:gap-3.5">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-surface-container-highest p-1.5 shrink-0 flex items-center justify-center border border-white/10 shadow-sm">
+                <img
+                  src={currentQ.image}
+                  alt={currentQ.toolName}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded bg-surface-container text-tertiary font-bold">
+                    CÂU {qIndex + 1}/{questions.length}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold text-white truncate">
+                    {currentQ.toolName}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+                  <span className="text-on-surface-variant font-medium">Bản chất công cụ:</span>
+                  <span
+                    className={`font-black px-2.5 py-0.5 rounded-full text-xs sm:text-sm ${
+                      currentQ.hasAI
+                        ? 'bg-tertiary-container/50 text-tertiary border border-tertiary/40'
+                        : 'bg-secondary-container/50 text-secondary border border-secondary/40'
+                    }`}
+                  >
+                    {currentQ.hasAI ? '👉 CÓ SỬ DỤNG AI' : '👈 KHÔNG CÓ AI (TỰ ĐỘNG HÓA)'}
+                  </span>
+                </div>
               </div>
             </div>
 
+            {/* Phần giải nghĩa sư phạm cốt lõi - TẬP TRUNG TỐI ĐA (FOCUS NHẤT) */}
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-surface-container/95 via-surface-container to-surface-container/85 border-2 border-tertiary/40 shadow-[0_0_30px_rgba(23,219,229,0.15)] flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 text-tertiary text-xs sm:text-sm font-black uppercase tracking-wider">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-tertiary/20 border border-tertiary/40 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-tertiary">psychology</span>
+                </div>
+                <span className="font-extrabold text-white text-xs sm:text-sm">GIẢI NGHĨA SƯ PHẠM</span>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-tertiary/20 text-tertiary border border-tertiary/30 font-bold ml-auto">
+                  MANABIE EDTECH
+                </span>
+              </div>
+              <p className="text-sm sm:text-base md:text-[17px] font-semibold text-white/95 leading-relaxed sm:leading-loose tracking-wide">
+                {currentQ.insight}
+              </p>
+            </div>
+
+            {/* Nút bấm chuyển câu tiếp theo */}
             <button
               type="button"
-              onClick={handleNextQuestion}
-              className="pinch-host w-full lg:w-auto px-6 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] text-body-base sm:text-headline-sm font-black uppercase tracking-wider shadow-[0_0_25px_rgba(23,219,229,0.55)] hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 border border-white/20"
+              autoFocus
+              onClick={() => {
+                setPedagogicalPopupOpen(false);
+                handleNextQuestion();
+              }}
+              className="pinch-host w-full py-2.5 sm:py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] text-xs sm:text-sm md:text-base font-black uppercase tracking-wider shadow-[0_6px_25px_rgba(23,219,229,0.4)] hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer border border-white/20"
             >
               <PinchMark live />
               <span>
-                {qIndex + 1 < questions.length ? 'CÂU TIẾP THEO' : 'XEM TỔNG KẾT TRẬN ĐẤU'}
+                {qIndex + 1 < questions.length
+                  ? 'CÂU TIẾP THEO (PHÍM SPACE / ENTER)'
+                  : 'HOÀN THÀNH • XEM TỔNG KẾT TRẬN ĐẤU'}
               </span>
-              <span className="material-symbols-outlined text-[20px] sm:text-[24px]">arrow_forward</span>
+              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">arrow_forward</span>
             </button>
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
       {/* POPUP XEM LẠI HƯỚNG DẪN CHƠI TRONG TRẬN ĐẤU */}
       {guideModalOpen && (
@@ -2425,10 +2447,28 @@ function SummaryPage({
                       </div>
                     </div>
 
-                    {/* Nội dung câu hỏi */}
-                    <h4 className="text-body-sm sm:text-body-base font-bold text-on-surface mb-2.5 leading-snug">
-                      {ans.question}
-                    </h4>
+                    {/* Nội dung câu hỏi kèm hình minh họa công cụ */}
+                    <div className="flex items-center gap-3 mb-2.5">
+                      {ans.image && (
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-surface-container-highest/60 border border-white/10 p-1 shrink-0 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={ans.image}
+                            alt={ans.toolName || 'Minh họa công cụ'}
+                            className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        {ans.toolName && (
+                          <span className="text-[10px] font-bold uppercase text-tertiary tracking-wider block mb-0.5">
+                            {ans.toolName}
+                          </span>
+                        )}
+                        <h4 className="text-body-sm sm:text-body-base font-bold text-on-surface leading-snug">
+                          {ans.question}
+                        </h4>
+                      </div>
+                    </div>
 
                     {/* So sánh Lựa chọn người chơi vs Đáp án chuẩn */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">

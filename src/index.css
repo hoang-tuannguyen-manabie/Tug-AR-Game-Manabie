@@ -693,50 +693,52 @@
  * ============================================================================ */
 @keyframes tug-pull-jitter {
   0%, 100% {
-    transform: translate3d(0px, 0px, 0) rotate(0deg) scale(1);
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
   }
-  15% {
-    transform: translate3d(-5px, 1.5px, 0) rotate(-0.45deg) scale(1.01, 0.995);
+  16% {
+    transform: translate3d(-8px, 1.5px, 0) rotate(-0.7deg);
   }
-  30% {
-    transform: translate3d(3px, -1px, 0) rotate(0.3deg) scale(0.995, 1.005);
+  32% {
+    transform: translate3d(6px, -1.5px, 0) rotate(0.5deg);
   }
   48% {
-    transform: translate3d(-6px, 2px, 0) rotate(-0.55deg) scale(1.012, 0.99);
+    transform: translate3d(-10px, 2px, 0) rotate(-0.9deg);
   }
-  65% {
-    transform: translate3d(5px, 1px, 0) rotate(0.45deg) scale(1.005, 0.995);
+  68% {
+    transform: translate3d(8px, 1px, 0) rotate(0.7deg);
   }
-  82% {
-    transform: translate3d(-3px, -1.5px, 0) rotate(-0.25deg) scale(1);
+  84% {
+    transform: translate3d(-5px, -1.5px, 0) rotate(-0.4deg);
   }
 }
 
 @keyframes tug-jerk-left-kf {
   0% { transform: translate3d(0, 0, 0) scale(1); }
-  25% { transform: translate3d(-24px, -4px, 0) rotate(-1.6deg) scale(1.04); }
-  55% { transform: translate3d(6px, 2px, 0) rotate(0.4deg) scale(0.99); }
+  25% { transform: translate3d(-36px, -6px, 0) rotate(-2.4deg) scale(1.05); }
+  55% { transform: translate3d(10px, 3px, 0) rotate(0.8deg) scale(0.98); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
 @keyframes tug-jerk-right-kf {
   0% { transform: translate3d(0, 0, 0) scale(1); }
-  25% { transform: translate3d(24px, -4px, 0) rotate(1.6deg) scale(1.04); }
-  55% { transform: translate3d(-6px, 2px, 0) rotate(-0.4deg) scale(0.99); }
+  25% { transform: translate3d(36px, -6px, 0) rotate(2.4deg) scale(1.05); }
+  55% { transform: translate3d(-10px, 3px, 0) rotate(-0.8deg) scale(0.98); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
 .tug-scene-live {
-  animation: tug-pull-jitter 0.85s ease-in-out infinite;
+  animation: tug-pull-jitter 0.8s ease-in-out infinite;
   will-change: transform;
 }
 
 .tug-scene-jerk-left {
-  animation: tug-jerk-left-kf 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tug-jerk-left-kf 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
 }
 
 .tug-scene-jerk-right {
-  animation: tug-jerk-right-kf 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tug-jerk-right-kf 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
 }
 
 /* ============================================================================
