@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ControlMode, MatchStats } from '../App';
+import {
+  isSupabaseConfigured,
+  fetchLeaderboardFromDb,
+  saveLeaderboardToDb,
+  clearLeaderboardInDb,
+  subscribeLeaderboardChanges,
+} from '../services/supabase';
 
 export interface LeaderboardEntry {
   id: string;
@@ -73,11 +80,62 @@ export function DashboardLeaderboard({
   const [playerSchool, setPlayerSchool] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState<boolean>(() => isSupabaseConfigured());
+  const [, setIsLoadingDb] = useState<boolean>(false);
 
   // ID duy nhất cho lượt chơi hiện tại
   const [currentSessionId] = useState<string>(() => {
     return currentStats?.sessionId || '';
   });
+
+  // Tải dữ liệu từ PostgreSQL (Supabase) khi khởi tạo và đăng ký Realtime
+  useEffect(() => {
+    let active = true;
+
+    async function initSupabaseData() {
+      if (isSupabaseConfigured()) {
+        setIsLoadingDb(true);
+        const dbEntries = await fetchLeaderboardFromDb();
+        if (active && dbEntries !== null) {
+          setIsDbConnected(true);
+          setEntries((prev) => {
+            const currentItem = prev.find((e) => e.isCurrent);
+            if (currentItem) {
+              const merged = [
+                currentItem,
+                ...dbEntries.filter((e) => e.id !== currentItem.id),
+              ];
+              const sorted = sortEntries(merged);
+              saveStoredEntries(sorted);
+              return sorted;
+            }
+            const sorted = sortEntries(dbEntries);
+            saveStoredEntries(sorted);
+            return sorted;
+          });
+        } else if (active) {
+          setIsDbConnected(false);
+        }
+        if (active) setIsLoadingDb(false);
+      }
+    }
+
+    initSupabaseData();
+
+    // Lắng nghe thay đổi Realtime từ PostgreSQL Supabase
+    const unsubscribe = subscribeLeaderboardChanges(() => {
+      fetchLeaderboardFromDb().then((dbEntries) => {
+        if (active && dbEntries !== null) {
+          setEntries(sortEntries(dbEntries));
+        }
+      });
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   // Tự động ghi nhận lượt chơi thật hiện tại vào danh sách (bỏ qua session khởi tạo placeholder)
   useEffect(() => {
@@ -122,6 +180,12 @@ export function DashboardLeaderboard({
 
       const sorted = sortEntries(nextList);
       saveStoredEntries(sorted);
+
+      // Tự động lưu lên PostgreSQL (Supabase)
+      saveLeaderboardToDb(newEntry).then((success) => {
+        if (success) setIsDbConnected(true);
+      });
+
       return sorted;
     });
   }, [currentStats, currentSessionId]);
@@ -131,14 +195,18 @@ export function DashboardLeaderboard({
     e.preventDefault();
     if (!playerName.trim()) return;
 
+    let targetEntry: LeaderboardEntry | null = null;
+
     setEntries((prev) => {
       const nextList = prev.map((entry) => {
         if (entry.id === currentSessionId) {
-          return {
+          const updated = {
             ...entry,
             name: playerName.trim(),
-            schoolOrRole: playerSchool.trim() || 'Manabie Public School 2026',
+            schoolOrRole: playerSchool.trim() || 'Manabie EdTech 2026',
           };
+          targetEntry = updated;
+          return updated;
         }
         return entry;
       });
@@ -147,14 +215,21 @@ export function DashboardLeaderboard({
       return sorted;
     });
 
+    if (targetEntry) {
+      saveLeaderboardToDb(targetEntry).then((success) => {
+        if (success) setIsDbConnected(true);
+      });
+    }
+
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  const handleResetLeaderboard = () => {
+  const handleResetLeaderboard = async () => {
     localStorage.removeItem(STORAGE_KEY);
     setEntries([]);
     setShowResetConfirm(false);
+    await clearLeaderboardInDb();
   };
 
   const sortedList = sortEntries(entries);
@@ -189,7 +264,30 @@ export function DashboardLeaderboard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 z-10 self-start sm:self-center">
+        <div className="flex items-center gap-2 z-10 self-start sm:self-center flex-wrap">
+          {/* Trạng thái kết nối PostgreSQL / Supabase */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10.5px] font-bold ${
+              isDbConnected
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                : 'bg-amber-950/50 border-amber-500/30 text-amber-300'
+            }`}
+            title={
+              isDbConnected
+                ? 'Đã kết nối PostgreSQL (Supabase) lưu trữ trực tuyến'
+                : 'Đang lưu tạm LocalStorage. Hãy thêm VITE_SUPABASE_URL và VITE_SUPABASE_ANON_KEY vào file .env để đồng bộ PostgreSQL online'
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isDbConnected ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'
+              }`}
+            />
+            <span className="font-mono">
+              {isDbConnected ? 'POSTGRESQL ONLINE' : 'LOCAL STORAGE'}
+            </span>
+          </div>
+
           {sortedList.length > 0 && (
             <button
               type="button"
