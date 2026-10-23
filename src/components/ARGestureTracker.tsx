@@ -111,6 +111,10 @@ export function ARGestureTracker({
   // DOM Refs cho Test AR
   const miniTimerTextRef = useRef<HTMLSpanElement>(null);
   const miniTimerCircleRef = useRef<SVGCircleElement>(null);
+  const miniTargetCenterRef = useRef<HTMLDivElement>(null);
+  const miniHoldStartTimeRef = useRef<number>(0);
+  const miniIsHoveredRef = useRef<boolean>(false);
+  const miniLastTickTimeRef = useRef<number>(0);
   const lastHandPointsRef = useRef<Array<{ x: number; y: number }>>([]);
   const lastFacePosRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -166,8 +170,19 @@ export function ARGestureTracker({
   const onHoverRef = useRef(onHoverSide);
   onHoverRef.current = onHoverSide;
 
-  // Xử lý khi bắt trúng hoặc hết 3s biến mất để mở mục tiêu mới
+  // Xử lý khi bắt trúng (tương tác đủ 1s) hoặc bỏ qua
   const resolveWave = (success: boolean, target: MiniGameTarget, source: string | null) => {
+    miniHoldStartTimeRef.current = 0;
+    if (miniTimerCircleRef.current) {
+      miniTimerCircleRef.current.style.strokeDashoffset = '238.76';
+    }
+    if (miniTimerTextRef.current) {
+      miniTimerTextRef.current.textContent = 'Giữ 1.0s';
+    }
+    if (miniTargetCenterRef.current) {
+      miniTargetCenterRef.current.style.transform = 'scale(1)';
+    }
+
     if (success) {
       const newScore = miniScoreRef.current + 1;
       const newStreak = miniStreakRef.current + 1;
@@ -181,7 +196,7 @@ export function ARGestureTracker({
         x: target.x,
         y: target.y,
         success: true,
-        text: `+1 ĐIỂM! ${source === 'hand' ? '✋' : source === 'face' ? '😊' : '🎯'}`,
+        text: `+1 ĐIỂM! ĐÃ BẮT TRÚNG 🎯 ${source === 'hand' ? '✋' : source === 'face' ? '😊' : '🖱️'}`,
       });
     } else {
       miniStreakRef.current = 0;
@@ -192,11 +207,11 @@ export function ARGestureTracker({
         x: target.x,
         y: target.y,
         success: false,
-        text: 'Hết giờ! ⏱️',
+        text: 'Đã bỏ qua ⏭️',
       });
     }
 
-    // Sau 200ms: xóa feedback và mở ngay mục tiêu mới
+    // Sau 250ms: xóa feedback và mở ngay mục tiêu mới
     setTimeout(() => {
       setMiniHitFeedback(null);
       const nextWave = miniWaveIndexRef.current + 1;
@@ -212,8 +227,9 @@ export function ARGestureTracker({
         setMiniWaveIndex(nextWave);
         miniWaveStartTimeRef.current = performance.now();
         miniWaveResolvedRef.current = false;
+        miniHoldStartTimeRef.current = 0;
       }
-    }, 200);
+    }, 250);
   };
   const resolveWaveRef = useRef(resolveWave);
   resolveWaveRef.current = resolveWave;
@@ -221,6 +237,7 @@ export function ARGestureTracker({
   const handleTargetClick = (target: MiniGameTarget) => {
     if (!miniWaveResolvedRef.current && !miniIsFinishedRef.current) {
       miniWaveResolvedRef.current = true;
+      miniHoldStartTimeRef.current = 0;
       resolveWave(true, target, 'click');
     }
   };
@@ -240,6 +257,7 @@ export function ARGestureTracker({
     setMiniHitFeedback(null);
     miniWaveStartTimeRef.current = performance.now();
     miniWaveResolvedRef.current = false;
+    miniHoldStartTimeRef.current = 0;
   };
 
   // Reset tiến độ khi câu hỏi mới bắt đầu hoặc bị khóa
@@ -388,6 +406,11 @@ export function ARGestureTracker({
                     const my = (wrist.y + middleTip.y + indexTip.y) / 3;
                     currentPoints.push({ x: mx, y: my });
 
+                    // Bổ sung đầu ngón tay trỏ để nhận diện cử chỉ chỉ tay/chạm mục tiêu chuẩn xác
+                    const ix = 1 - indexTip.x;
+                    const iy = indexTip.y;
+                    currentPoints.push({ x: ix, y: iy });
+
                     // Chỉ vẽ canvas khi ở chế độ hiển thị camera (minigame)
                     if (!isCameraHidden) {
                       ctx.save();
@@ -396,6 +419,12 @@ export function ARGestureTracker({
                       ctx.shadowBlur = 10;
                       ctx.beginPath();
                       ctx.arc(mx * w, my * h, 16, 0, Math.PI * 2);
+                      ctx.fill();
+
+                      // Chấm sáng đầu ngón tay
+                      ctx.fillStyle = '#ffffff';
+                      ctx.beginPath();
+                      ctx.arc(ix * w, iy * h, 8, 0, Math.PI * 2);
                       ctx.fill();
                       ctx.restore();
                     }
@@ -540,57 +569,85 @@ export function ARGestureTracker({
             }
 
             // =================================================================
-            // CHẾ ĐỘ 1: THỬ NGHIỆM AR PHẢN XẠ (MỖI ĐỢT 3S, KHÔNG BẮT THÌ MỤC TIÊU TỰ BIẾN MẤT)
+            // CHẾ ĐỘ 1: THỬ NGHIỆM AR (MỤC TIÊU CẦN ĐƯỢC TƯƠNG TÁC TRONG 1S MỚI BIẾN MẤT)
             // =================================================================
             if (mode === 'minigame' && !miniIsFinishedRef.current) {
-              if (miniWaveStartTimeRef.current === 0) {
-                miniWaveStartTimeRef.current = now;
-              }
               const currentTarget = miniTargetsRef.current[miniWaveIndexRef.current];
               if (currentTarget && !miniWaveResolvedRef.current) {
-                const elapsed = (now - miniWaveStartTimeRef.current) / 1000;
-                const timeLeft = Math.max(0, 3.0 - elapsed);
+                // 1. Bàn tay chạm mục tiêu (bán kính kiểm tra rộng 0.25 HOẶC cùng phía và gần về chiều dọc)
+                const isHandNear = lastHandPointsRef.current.some((pt) => {
+                  const dist = Math.hypot(pt.x - currentTarget.x, (pt.y - currentTarget.y) * 1.1);
+                  if (dist < 0.25) return true;
+                  const isSameSide = currentTarget.side === 'LEFT' ? pt.x < 0.44 : pt.x > 0.56;
+                  const isSimilarY = Math.abs(pt.y - currentTarget.y) < 0.30;
+                  return isSameSide && isSimilarY;
+                });
 
-                // Cập nhật DOM đồng hồ đếm ngược 60 FPS
-                if (miniTimerTextRef.current) {
-                  miniTimerTextRef.current.textContent = `${timeLeft.toFixed(1)}s`;
-                }
-                if (miniTimerCircleRef.current) {
-                  const circumference = 238.76;
-                  const offset = circumference * (1 - timeLeft / 3.0);
-                  miniTimerCircleRef.current.style.strokeDashoffset = `${offset}`;
-                }
-
-                // 1. Bàn tay chạm mục tiêu (bán kính kiểm tra rộng 0.24)
-                const isHandHit = lastHandPointsRef.current.some(
-                  (pt) => Math.hypot(pt.x - currentTarget.x, pt.y - currentTarget.y) < 0.24
-                );
-
-                // 2. Khuôn mặt chạm mục tiêu (bán kính kiểm tra 0.22)
+                // 2. Khuôn mặt chạm mục tiêu (bán kính kiểm tra 0.25 HOẶC nghiêng mặt sang phía mục tiêu)
                 const face = lastFacePosRef.current;
-                const isFaceHit = face
-                  ? Math.hypot(face.x - currentTarget.x, face.y - currentTarget.y) < 0.22
+                const isFaceNear = face
+                  ? Math.hypot(face.x - currentTarget.x, face.y - currentTarget.y) < 0.25 ||
+                    (currentTarget.side === 'LEFT' ? face.x < 0.42 : face.x > 0.58)
                   : false;
 
-                // 3. Cử chỉ hướng sang đúng bên mục tiêu
-                const isGestureHit =
-                  (currentTarget.side === 'LEFT' && (cachedSide === 'LEFT' || lastHandPointsRef.current.some((pt) => pt.x < 0.44) || (face && face.x < 0.44))) ||
-                  (currentTarget.side === 'RIGHT' && (cachedSide === 'RIGHT' || lastHandPointsRef.current.some((pt) => pt.x > 0.56) || (face && face.x > 0.56)));
+                // 3. Chuột hover trên mục tiêu
+                const isMouseNear = miniIsHoveredRef.current;
 
-                if (isHandHit || isFaceHit || isGestureHit) {
-                  miniWaveResolvedRef.current = true;
-                  if (resolveWaveRef.current) {
-                    resolveWaveRef.current(
-                      true,
-                      currentTarget,
-                      isHandHit ? 'hand' : isFaceHit ? 'face' : 'gesture'
-                    );
+                const isInteracting = isHandNear || isFaceNear || isMouseNear;
+                const interactionSource = isHandNear ? 'hand' : isFaceNear ? 'face' : 'mouse';
+
+                if (isInteracting) {
+                  if (miniHoldStartTimeRef.current === 0) {
+                    miniHoldStartTimeRef.current = now;
+                    audio.playHoverTick();
                   }
-                } else if (timeLeft <= 0) {
-                  // SAU 3S KHÔNG BẮT ĐƯỢC THÌ BIẾN MẤT VÀ MỞ MỤC TIÊU MỚI
-                  miniWaveResolvedRef.current = true;
-                  if (resolveWaveRef.current) {
-                    resolveWaveRef.current(false, currentTarget, null);
+
+                  const holdDuration = (now - miniHoldStartTimeRef.current) / 1000;
+                  const progress = Math.min(1.0, holdDuration / 1.0); // Cần tương tác trong 1.0s
+
+                  // Âm thanh nhịp gõ khi đang giữ
+                  if (now - miniLastTickTimeRef.current > 250 && progress < 1.0) {
+                    audio.playHoverTick();
+                    miniLastTickTimeRef.current = now;
+                  }
+
+                  // Cập nhật DOM vòng tiến độ 60 FPS
+                  if (miniTimerCircleRef.current) {
+                    const circumference = 238.76;
+                    const offset = circumference * (1 - progress);
+                    miniTimerCircleRef.current.style.strokeDashoffset = `${offset}`;
+                  }
+
+                  if (miniTimerTextRef.current) {
+                    miniTimerTextRef.current.textContent = `${Math.min(1.0, holdDuration).toFixed(1)}s / 1.0s`;
+                  }
+
+                  if (miniTargetCenterRef.current) {
+                    miniTargetCenterRef.current.style.transform = `scale(${1 + progress * 0.1})`;
+                  }
+
+                  // KHI TƯƠNG TÁC ĐỦ 1 GIÂY -> MỤC TIÊU MỚI BIẾN MẤT VÀ TÍNH ĐIỂM
+                  if (holdDuration >= 1.0) {
+                    miniWaveResolvedRef.current = true;
+                    miniHoldStartTimeRef.current = 0;
+                    if (miniTargetCenterRef.current) {
+                      miniTargetCenterRef.current.style.transform = 'scale(1)';
+                    }
+                    if (resolveWaveRef.current) {
+                      resolveWaveRef.current(true, currentTarget, interactionSource);
+                    }
+                  }
+                } else {
+                  // Khi không tương tác hoặc rời tay: reset tiến độ về 0 (Mục tiêu KHÔNG tự biến mất)
+                  miniHoldStartTimeRef.current = 0;
+                  if (miniTimerCircleRef.current) {
+                    miniTimerCircleRef.current.style.strokeDashoffset = '238.76';
+                  }
+                  if (miniTimerTextRef.current) {
+                    miniTimerTextRef.current.textContent = 'Giữ 1.0s';
+                  }
+                  if (miniTargetCenterRef.current) {
+                    miniTargetCenterRef.current.style.transform = 'scale(1)';
                   }
                 }
               }
@@ -851,11 +908,40 @@ export function ARGestureTracker({
         )}
 
         {/* =================================================================
-         * CHẾ ĐỘ 1: THỬ NGHIỆM AR (MỤC TIÊU 3S, KHÔNG CÓ THANH VÒNG 1,2,3)
+         * CHẾ ĐỘ 1: THỬ NGHIỆM AR (MỤC TIÊU PHẢI TƯƠNG TÁC TRONG 1S MỚI BIẾN MẤT)
          * ================================================================= */}
         {mode === 'minigame' && status === 'ready' && !miniIsFinished && (
           <div className="absolute inset-0 z-20 pointer-events-none">
-            {/* MỤC TIÊU HIỆN TẠI (BIẾN MẤT VÀ MỞ MỤC TIÊU MỚI SAU MỖI 3S) */}
+            {/* Thanh hiển thị tiến độ bài tập và điểm số ở góc trên */}
+            <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-30 pointer-events-auto">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-md border border-white/15 text-white shadow-lg text-[10px] sm:text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>MỤC TIÊU: <strong className="text-tertiary">{miniWaveIndex + 1}</strong> / 10</span>
+                <span className="text-white/40">•</span>
+                <span>ĐIỂM: <strong className="text-emerald-400">{miniScore}</strong></span>
+              </div>
+
+              {/* Nút bỏ qua mục tiêu nếu người dùng muốn chuyển mục tiêu khác */}
+              {miniTargets[miniWaveIndex] && !miniHitFeedback && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!miniWaveResolvedRef.current) {
+                      miniWaveResolvedRef.current = true;
+                      miniHoldStartTimeRef.current = 0;
+                      resolveWave(false, miniTargets[miniWaveIndex], 'skip');
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface-variant hover:text-white text-[10px] font-semibold border border-white/10 shadow-md transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                  title="Bỏ qua mục tiêu này nếu góc máy quét bị che khuất"
+                >
+                  <span>Bỏ qua</span>
+                  <span className="material-symbols-outlined text-[13px]">skip_next</span>
+                </button>
+              )}
+            </div>
+
+            {/* MỤC TIÊU HIỆN TẠI (CẦN TƯƠNG TÁC GIỮ ĐỦ 1S MỚI BIẾN MẤT) */}
             {miniTargets[miniWaveIndex] && !miniHitFeedback && (
               <div
                 style={{
@@ -863,16 +949,18 @@ export function ARGestureTracker({
                   top: `${miniTargets[miniWaveIndex].y * 100}%`,
                 }}
                 onClick={() => handleTargetClick(miniTargets[miniWaveIndex])}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center cursor-pointer pointer-events-auto select-none group w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 transition-transform duration-150 active:scale-95"
+                onMouseEnter={() => { miniIsHoveredRef.current = true; }}
+                onMouseLeave={() => { miniIsHoveredRef.current = false; }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center justify-center cursor-pointer pointer-events-auto select-none group w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 transition-transform duration-100"
               >
                 {/* Vòng lan tỏa Radar */}
                 <div
                   className={`absolute inset-0 rounded-full border-2 ${
                     miniTargets[miniWaveIndex].side === 'LEFT' ? 'border-secondary' : 'border-tertiary'
-                  } animate-ping opacity-60 pointer-events-none`}
+                  } animate-ping opacity-50 pointer-events-none`}
                 />
 
-                {/* Vòng đếm ngược SVG 3 giây */}
+                {/* Vòng nạp tiến độ tương tác SVG 1.0 giây (Bắt đầu từ rỗng 238.76 và lấp đầy khi giữ 1s) */}
                 <svg className="w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 96 96">
                   <circle
                     cx="48"
@@ -888,20 +976,21 @@ export function ARGestureTracker({
                     cy="48"
                     r="38"
                     className={miniTargets[miniWaveIndex].side === 'LEFT' ? 'stroke-secondary' : 'stroke-tertiary'}
-                    strokeWidth="5"
+                    strokeWidth="5.5"
                     fill="none"
                     strokeLinecap="round"
                     strokeDasharray="238.76"
-                    style={{ strokeDashoffset: '0' }}
+                    style={{ strokeDashoffset: '238.76', transition: 'stroke-dashoffset 40ms linear' }}
                   />
                 </svg>
 
                 {/* Nhân trung tâm của Mục tiêu */}
                 <div
-                  className={`absolute inset-2 sm:inset-3 rounded-full backdrop-blur-md border-2 flex flex-col items-center justify-center transition-all ${
+                  ref={miniTargetCenterRef}
+                  className={`absolute inset-2 sm:inset-3 rounded-full backdrop-blur-md border-2 flex flex-col items-center justify-center transition-all duration-100 ${
                     miniTargets[miniWaveIndex].side === 'LEFT'
-                      ? 'bg-secondary-container/75 border-secondary text-secondary shadow-[0_0_24px_rgba(184,196,255,0.7)] group-hover:scale-105'
-                      : 'bg-tertiary-container/75 border-tertiary text-tertiary shadow-[0_0_24px_rgba(23,219,229,0.7)] group-hover:scale-105'
+                      ? 'bg-secondary-container/80 border-secondary text-secondary shadow-[0_0_24px_rgba(184,196,255,0.7)]'
+                      : 'bg-tertiary-container/80 border-tertiary text-tertiary shadow-[0_0_24px_rgba(23,219,229,0.7)]'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[24px] sm:text-[28px] animate-bounce my-0.5 text-white">
@@ -912,18 +1001,23 @@ export function ARGestureTracker({
                   </span>
                 </div>
 
-                {/* Nhãn đồng hồ đếm ngược 3s */}
+                {/* Nhãn hướng dẫn & tiến độ giữ tương tác 1s */}
                 <div className="absolute -top-7 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-surface-container-lowest/95 border border-white/20 text-white text-[9.5px] sm:text-[10.5px] font-bold shadow-lg flex items-center gap-1.5 pointer-events-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
                   <span ref={miniTimerTextRef} className="font-mono text-tertiary font-black">
-                    3.0s
+                    Giữ 1.0s
                   </span>
-                  <span>• Chạm tay / mặt</span>
+                  <span className="text-white/80">• Đưa tay/mặt vào</span>
+                </div>
+
+                {/* Tên vùng mục tiêu */}
+                <div className="absolute -bottom-5 whitespace-nowrap px-2 py-0.5 rounded-full bg-black/60 text-[8.5px] text-white/70 font-semibold pointer-events-none">
+                  {miniTargets[miniWaveIndex].label}
                 </div>
               </div>
             )}
 
-            {/* Phản hồi khi Bắt trúng hoặc Hết giờ */}
+            {/* Phản hồi khi Bắt trúng hoặc Bỏ qua */}
             {miniHitFeedback && (
               <div
                 style={{
@@ -933,11 +1027,11 @@ export function ARGestureTracker({
                 className={`absolute -translate-x-1/2 -translate-y-1/2 z-40 px-3.5 py-1.5 rounded-xl font-black text-xs sm:text-sm tracking-wide shadow-2xl flex items-center gap-1.5 pointer-events-none ppt-page-enter ${
                   miniHitFeedback.success
                     ? 'bg-emerald-400 text-[#032117] border-2 border-white shadow-[0_0_35px_rgba(16,185,129,0.9)] scale-110'
-                    : 'bg-error text-on-error border-2 border-white/40 shadow-[0_0_25px_rgba(255,180,171,0.6)]'
+                    : 'bg-surface-container-highest text-on-surface border-2 border-white/30 shadow-[0_0_20px_rgba(0,0,0,0.5)]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">
-                  {miniHitFeedback.success ? 'check_circle' : 'timer_off'}
+                  {miniHitFeedback.success ? 'check_circle' : 'skip_next'}
                 </span>
                 <span>{miniHitFeedback.text}</span>
               </div>
