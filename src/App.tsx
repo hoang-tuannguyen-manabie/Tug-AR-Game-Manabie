@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { ARGestureTracker, GestureSide } from './components/ARGestureTracker';
 import { DashboardLeaderboard } from './components/DashboardLeaderboard';
+import { CharacterAvatar, PlayerSetupModal, SetupStep } from './components/PlayerSetupModal';
 import { BRAND_MASCOTS, MANABIE_LOGO } from './data/brand';
+import {
+  getCharacterById,
+  loadSavedPlayerProfile,
+  PLAYER_CHARACTERS,
+  PlayerProfile,
+  savePlayerProfile,
+} from './data/characters';
 import { TUG_QUESTIONS, getShuffledQuestions, TugQuestion } from './data/questions';
 import { audio } from './utils/audio';
 
@@ -37,6 +45,10 @@ export interface MatchStats {
   controlMode?: ControlMode;
   sessionId?: string;
   answers?: AnswerRecord[];
+  playerName?: string;
+  characterId?: string;
+  characterImage?: string;
+  characterName?: string;
 }
 
 const INITIAL_STATS: MatchStats = {
@@ -97,6 +109,18 @@ export default function App() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [gameSessionId, setGameSessionId] = useState(1);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
+  // Quản lý hồ sơ người chơi & nhân vật đồng hành (36 nhân vật)
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(() =>
+    loadSavedPlayerProfile()
+  );
+  // Tự động mở popup hồ sơ người chơi & nhân vật ngay từ khi mới vào đầu trang
+  const [playerSetupOpen, setPlayerSetupOpen] = useState(true);
+  const [playerSetupInitialStep, setPlayerSetupInitialStep] = useState<SetupStep>(() => {
+    const saved = loadSavedPlayerProfile();
+    return saved ? 'confirm' : 'name';
+  });
+  const [pendingGameLaunchMode, setPendingGameLaunchMode] = useState<ControlMode | null>(null);
 
   // Quản lý khóa các bước theo tuần tự (Mục 3 và Mục 4 ban đầu bị khóa)
   const [unlockedSteps, setUnlockedSteps] = useState<Record<PageStep, boolean>>({
@@ -437,6 +461,14 @@ export default function App() {
                 disabled={isLocked}
                 onClick={() => {
                   if (isLocked) return;
+                  if (tab.id === 'tro-choi-keo-co' && page !== 'tro-choi-keo-co') {
+                    if (!playerProfile) {
+                      setPendingGameLaunchMode(controlMode);
+                      setPlayerSetupInitialStep('name');
+                      setPlayerSetupOpen(true);
+                      return;
+                    }
+                  }
                   triggerPageTransition(tab.id, {
                     isLaunchGame: tab.id === 'tro-choi-keo-co' && page !== 'tro-choi-keo-co',
                   });
@@ -511,9 +543,39 @@ export default function App() {
 
         {/* Chân sidebar khi mở rộng */}
         {sidebarExpanded && (
-          <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-on-surface-variant">
-            <span>Chế độ: <strong>{controlMode === 'ar' ? 'Camera AR' : 'Chuột'}</strong></span>
-            <span className="text-tertiary font-bold">12 Tiết AI</span>
+          <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-col gap-1.5 text-[10px] text-on-surface-variant">
+            {playerProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (page !== 'tro-choi-keo-co') {
+                    setPendingGameLaunchMode(null);
+                    setPlayerSetupInitialStep('name');
+                    setPlayerSetupOpen(true);
+                  }
+                }}
+                className="flex items-center gap-2 p-1.5 rounded-xl bg-[#241354]/90 border border-purple-400/30 hover:border-emerald-400/60 transition-colors cursor-pointer text-left"
+                title="Đổi tên hoặc nhân vật đồng hành"
+              >
+                <img
+                  src={playerProfile.characterImage}
+                  alt={playerProfile.characterName}
+                  className="w-6 h-6 rounded-lg object-contain bg-[#180c3a] shrink-0"
+                />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[10.5px] font-black text-white truncate">
+                    {playerProfile.playerName}
+                  </span>
+                  <span className="text-[9px] text-emerald-300 truncate">
+                    {playerProfile.characterName}
+                  </span>
+                </div>
+              </button>
+            )}
+            <div className="flex items-center justify-between">
+              <span>Chế độ: <strong>{controlMode === 'ar' ? 'Camera AR' : 'Chuột'}</strong></span>
+              <span className="text-tertiary font-bold">12 Tiết AI</span>
+            </div>
           </div>
         )}
       </aside>
@@ -538,6 +600,12 @@ export default function App() {
             <WelcomePage
               controlMode={controlMode}
               onSelectControlMode={setControlMode}
+              playerProfile={playerProfile}
+              onOpenPlayerSetup={(step = 'name') => {
+                setPendingGameLaunchMode(controlMode);
+                setPlayerSetupInitialStep(step);
+                setPlayerSetupOpen(true);
+              }}
               onNext={() => {
                 unlockStep('huong-dan');
                 triggerPageTransition('huong-dan');
@@ -549,8 +617,16 @@ export default function App() {
           {page === 'huong-dan' && (
             <GuidePage
               controlMode={controlMode}
+              onSelectControlMode={setControlMode}
+              playerProfile={playerProfile}
+              onOpenPlayerSetup={(step = 'name') => {
+                setPendingGameLaunchMode(controlMode);
+                setPlayerSetupInitialStep(step);
+                setPlayerSetupOpen(true);
+              }}
               onBack={() => triggerPageTransition('gioi-thieu')}
               onStartGame={(mode) => {
+                setControlMode(mode);
                 unlockStep('tro-choi-keo-co');
                 triggerPageTransition('tro-choi-keo-co', {
                   modeOverride: mode,
@@ -565,6 +641,8 @@ export default function App() {
             <GameplayPage
               key={gameSessionId}
               controlMode={controlMode}
+              onSelectControlMode={setControlMode}
+              playerProfile={playerProfile}
               onFinish={(stats) => {
                 setMatchStats(stats);
                 unlockStep('tong-ket');
@@ -579,16 +657,36 @@ export default function App() {
           {page === 'tong-ket' && (
             <SummaryPage
               stats={matchStats}
-              onReplay={() =>
-                triggerPageTransition('huong-dan', {
-                  customLabel: 'CHUẨN BỊ TRẬN MỚI • CHỌN CHẾ ĐỘ CHƠI',
-                })
-              }
+              playerProfile={playerProfile}
+              onReplay={() => {
+                setPendingGameLaunchMode(controlMode);
+                setPlayerSetupInitialStep('name');
+                setPlayerSetupOpen(true);
+              }}
               onHome={() => triggerPageTransition('gioi-thieu')}
             />
           )}
         </div>
       </main>
+
+      {/* MÀN HÌNH THIẾT LẬP NGƯỜI CHƠI: NHẬP TÊN -> CHỌN 36 NHÂN VẬT -> XÁC NHẬN */}
+      <PlayerSetupModal
+        open={playerSetupOpen}
+        initialProfile={playerProfile}
+        initialStep={playerSetupInitialStep}
+        onConfirm={(profile) => {
+          setPlayerProfile(profile);
+          savePlayerProfile(profile);
+          setPlayerSetupOpen(false);
+          setPendingGameLaunchMode(null);
+          // Nút bắt đầu chơi sẽ tới mục 1 để chọn phương thức chơi chứ không nhảy hẳn vào màn chơi
+          unlockStep('gioi-thieu');
+          unlockStep('huong-dan');
+          triggerPageTransition('gioi-thieu', {
+            forceUnlock: true,
+          });
+        }}
+      />
 
       {/* FOOTER CHUNG (CHỈ HIỂN THỊ KHI Ở MỤC 4 TỔNG KẾT ĐỂ MỤC 1, 2, 3 KHÔNG BỊ SCROLL VÀ TOÀN BỘ ĐÃ ĐƯỢC CHUYỂN VÀO SIDEBAR) */}
       {page === 'tong-ket' && (
@@ -628,7 +726,7 @@ export default function App() {
             <span className="text-label-caps text-tertiary uppercase">HỆ THỐNG TƯƠNG TÁC LỚP HỌC</span>
             <h3 className="text-headline-md text-on-surface">Hai chế độ điều khiển linh hoạt</h3>
             <p className="text-body-sm text-on-surface-variant leading-relaxed">
-              • <strong>Camera AR (Vẫy tay & Khuôn mặt)</strong>: Giơ tay trái/phải hoặc nghiêng mặt trái/phải trước webcam.<br />
+              • <strong>Camera AR (Cử chỉ bàn tay)</strong>: Đưa bàn tay sang trái hoặc phải trước webcam để điều khiển.<br />
               • <strong>Chế độ Chuột (Click trực tiếp)</strong>: Phù hợp khi dùng màn hình tương tác cảm ứng hoặc chuột máy chiếu.
             </p>
             <button
@@ -651,16 +749,20 @@ export default function App() {
 function WelcomePage({
   controlMode,
   onSelectControlMode,
+  playerProfile,
+  onOpenPlayerSetup,
   onNext,
   onOpenQr,
 }: {
   controlMode: ControlMode;
   onSelectControlMode: (mode: ControlMode) => void;
+  playerProfile: PlayerProfile | null;
+  onOpenPlayerSetup: (step?: SetupStep) => void;
   onNext: () => void;
   onOpenQr: () => void;
 }) {
   return (
-    <div className="relative w-full max-w-4xl mx-auto rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl p-3 sm:p-4 md:p-5 overflow-hidden shadow-2xl border border-white/10 ppt-page-enter flex flex-col justify-between gap-2 sm:gap-3 h-full max-h-full">
+    <div className="relative w-full max-w-4xl mx-auto rounded-2xl bg-surface-container-lowest/90 backdrop-blur-xl p-3 sm:p-4 md:p-5 overflow-hidden shadow-2xl border border-white/10 ppt-page-enter flex flex-col justify-between gap-2 sm:gap-2.5 h-full max-h-full">
       {/* Cổng Morph Portal */}
       <div className="workshop-morph-gate" aria-hidden="true">
         <i>AI</i>
@@ -678,9 +780,27 @@ function WelcomePage({
             BƯỚC 01 / 04 • KHỞI ĐỘNG
           </span>
         </div>
-        <span className="text-[10px] sm:text-label-kicker text-secondary uppercase tracking-[0.14em]">
-          SỞ GD&ĐT • MANABIE EDTECH
-        </span>
+        <div className="flex items-center gap-2">
+          {playerProfile && (
+            <button
+              type="button"
+              onClick={() => onOpenPlayerSetup?.('confirm')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-950/70 hover:bg-purple-900/80 border border-purple-400/40 text-purple-200 text-[10px] font-bold cursor-pointer transition-all shadow-sm"
+              title="Nhấn để đổi tên hoặc chọn lại nhân vật"
+            >
+              <img
+                src={playerProfile.characterImage}
+                alt={playerProfile.characterName}
+                className="w-4 h-4 rounded-full object-contain bg-[#180c3a]"
+              />
+              <span className="truncate max-w-[120px] text-emerald-300">{playerProfile.playerName}</span>
+              <span className="material-symbols-outlined text-[13px] text-emerald-400">tune</span>
+            </button>
+          )}
+          <span className="text-[10px] sm:text-label-kicker text-secondary uppercase tracking-[0.14em]">
+            SỞ GD&ĐT • MANABIE EDTECH
+          </span>
+        </div>
       </div>
 
       {/* Tiêu đề chương trình */}
@@ -696,7 +816,7 @@ function WelcomePage({
         </p>
       </div>
 
-      {/* Mascot + Lời chào sư phạm */}
+      {/* Mascot + Lời chào sư phạm + Hoạt cảnh kéo co với AI */}
       <div className="p-2.5 sm:p-3 rounded-xl bg-surface-container/85 border border-white/10 shadow-md flex items-center justify-between gap-3 ppt-stagger-2 shrink-0">
         <div className="flex items-center gap-2.5 sm:gap-3">
           <img
@@ -721,7 +841,7 @@ function WelcomePage({
 
         <img
           src={BRAND_MASCOTS.tugOfWarScene}
-          alt="Hoạt cảnh Kéo co"
+          alt="Hoạt cảnh Kéo co với AI"
           className="hidden md:block h-14 sm:h-16 w-auto object-contain shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] tug-scene-live"
         />
       </div>
@@ -763,14 +883,14 @@ function WelcomePage({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-body-sm font-bold text-on-surface">
-                  Camera AR (Tay & Mặt)
+                  Camera AR (Cử chỉ tay)
                 </span>
                 {controlMode === 'ar' && (
                   <span className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#17dbe5]" />
                 )}
               </div>
               <span className="text-[10px] sm:text-xs text-on-surface-variant block truncate">
-                Vẫy tay hoặc nghiêng mặt Trái / Phải
+                Đưa tay sang Trái / Phải để điều khiển
               </span>
             </div>
           </button>
@@ -832,11 +952,16 @@ function WelcomePage({
  * ============================================================================ */
 function GuidePage({
   controlMode,
+  onSelectControlMode,
+  playerProfile,
+  onOpenPlayerSetup,
   onBack,
   onStartGame,
 }: {
   controlMode: ControlMode;
   onSelectControlMode?: (mode: ControlMode) => void;
+  playerProfile: PlayerProfile | null;
+  onOpenPlayerSetup: (step?: SetupStep) => void;
   onBack: () => void;
   onStartGame: (mode: ControlMode) => void;
 }) {
@@ -891,7 +1016,7 @@ function GuidePage({
           <div className="flex flex-col items-start">
             <span className="text-[8.5px] sm:text-[9.5px] text-outline uppercase font-bold">Thời lượng</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-sm sm:text-base font-black font-mono text-tertiary leading-none">15</span>
+              <span className="text-sm sm:text-base font-black font-mono text-tertiary leading-none">20</span>
               <span className="text-[9px] text-on-surface-variant font-bold">GIÂY/CÂU</span>
             </div>
           </div>
@@ -1049,7 +1174,7 @@ function GuidePage({
                       BẠN ĐÃ CHỌN ĐIỀU KHIỂN BẰNG CAMERA AR
                     </span>
                     <p className="text-[11px] sm:text-xs text-on-surface-variant leading-snug">
-                      Bấm nút bên dưới để bật camera và thử giơ tay ✋ hoặc nghiêng đầu 😊 sang Trái / Phải trước khi vào trận.
+                      Bấm nút bên dưới để bật camera và thử đưa bàn tay ✋ chạm giữ các mục tiêu 1 giây trước khi vào trận.
                     </p>
                   </div>
 
@@ -1073,8 +1198,15 @@ function GuidePage({
                   <ARGestureTracker
                     enabled={true}
                     mode="minigame"
+                    pointerImage={playerProfile?.characterImage}
+                    pointerName={playerProfile?.characterName}
                     onStartGame={() => onStartGame('ar')}
                     onSelectSide={() => {}}
+                    onFallbackToMouse={() => {
+                      audio.playClick();
+                      setIsTestingAR(false);
+                      onSelectControlMode?.('mouse');
+                    }}
                   />
                 </div>
               )}
@@ -1124,8 +1256,29 @@ function GuidePage({
         </button>
 
         <div className="flex items-center gap-2">
+          {/* Nút hiển thị hoặc chọn hồ sơ người chơi & nhân vật đồng hành */}
+          <button
+            type="button"
+            onClick={() => {
+              audio.init();
+              audio.playClick();
+              onOpenPlayerSetup('name');
+            }}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#241354]/90 hover:bg-[#311b6e] border border-purple-400/40 text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+            title="Thiết lập tên và chọn nhân vật đồng hành"
+          >
+            <img
+              src={playerProfile?.characterImage || PLAYER_CHARACTERS[0].image}
+              alt={playerProfile?.characterName || PLAYER_CHARACTERS[0].name}
+              className="w-6 h-6 rounded-lg object-contain bg-[#180c3a] shrink-0"
+            />
+            <span className="max-w-[120px] truncate text-emerald-300">
+              {playerProfile ? playerProfile.playerName : 'Chọn nhân vật'}
+            </span>
+          </button>
+
           {/* Huy hiệu hiển thị phương thức chơi đã chọn ở Bước 1 */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-container-lowest/80 border border-white/10 text-on-surface-variant text-xs font-semibold">
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-container-lowest/80 border border-white/10 text-on-surface-variant text-xs font-semibold">
             <span className="text-outline uppercase text-[10px]">Chế độ:</span>
             <span
               className={`font-black flex items-center gap-1 ${
@@ -1161,9 +1314,13 @@ function GuidePage({
  * ============================================================================ */
 function GameplayPage({
   controlMode,
+  onSelectControlMode,
+  playerProfile,
   onFinish,
 }: {
   controlMode: ControlMode;
+  onSelectControlMode?: (mode: ControlMode) => void;
+  playerProfile: PlayerProfile | null;
   onFinish: (stats: MatchStats) => void;
 }) {
   const [questions] = useState<TugQuestion[]>(() => getShuffledQuestions());
@@ -1185,7 +1342,7 @@ function GameplayPage({
   const [aiScore, setAiScore] = useState(100);
   const [ropeMeters, setRopeMeters] = useState(1.2);
   const [correctCount, setCorrectCount] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(20);
 
   // Hệ thống Chuỗi Thắng / Chuỗi Thua (Win / Lose Streaks)
   const [winStreak, setWinStreak] = useState(0);
@@ -1213,7 +1370,7 @@ function GameplayPage({
 
   // Reset trạng thái và kích hoạt Overlay đếm ngược 3, 2, 1 trước khi bắt đầu chơi hoặc qua câu mới
   useEffect(() => {
-    setTimeLeft(15);
+    setTimeLeft(20);
     setSelectedSide(null);
     setHoverSide(null);
     setHoverProgress(0);
@@ -1254,7 +1411,7 @@ function GameplayPage({
     audio.setIntensity(baseIntensity);
   }, [winStreak, loseStreak]);
 
-  // Đếm ngược 15s mỗi câu (chỉ chạy sau khi hoàn tất đếm ngược 3, 2, 1) + Hiệu ứng âm thanh dồn dập 5 giây cuối
+  // Đếm ngược 20s mỗi câu (chỉ chạy sau khi hoàn tất đếm ngược 3, 2, 1) + Hiệu ứng âm thanh dồn dập 5 giây cuối
   useEffect(() => {
     if (locked || roundCountdown !== null) return;
     const timer = window.setInterval(() => {
@@ -1285,7 +1442,7 @@ function GameplayPage({
     setSelectedSide(choiceSide);
 
     const elapsedSec = Math.max(0.8, (performance.now() - questionStartRef.current) / 1000);
-    reactionTimesRef.current.push(Math.min(15, elapsedSec));
+    reactionTimesRef.current.push(Math.min(20, elapsedSec));
 
     // LEFT = KHÔNG CÓ AI (hasAI === false)
     // RIGHT = CÓ SỬ DỤNG AI (hasAI === true)
@@ -1452,6 +1609,10 @@ function GameplayPage({
         controlMode,
         sessionId: 'session-' + Date.now(),
         answers: answeredListRef.current,
+        playerName: playerProfile?.playerName,
+        characterId: playerProfile?.characterId,
+        characterImage: playerProfile?.characterImage,
+        characterName: playerProfile?.characterName,
       });
     }
   };
@@ -1514,6 +1675,25 @@ function GameplayPage({
               </span>
             </div>
 
+            {/* Hiển thị người chơi & nhân vật đồng hành đã chọn trong màn hình chờ */}
+            {playerProfile && (
+              <div className="relative z-10 inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-[#241354]/90 border border-emerald-400/50 shadow-md">
+                <img
+                  src={playerProfile.characterImage}
+                  alt={playerProfile.characterName}
+                  className="w-8 h-8 rounded-xl object-contain bg-[#180c3a] border border-white/15 shrink-0"
+                />
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-black text-white leading-tight">
+                    {playerProfile.playerName}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-300 leading-tight">
+                    {playerProfile.characterName}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Chủ đề câu hỏi sắp tới */}
             <div className="relative z-10 flex flex-col gap-1">
               <span className="text-label-kicker text-tertiary uppercase font-bold">{currentQ.topic}</span>
@@ -1536,13 +1716,13 @@ function GameplayPage({
             {/* Hướng dẫn ngắn theo chế độ đã chọn */}
             <div className="relative z-10 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-surface-container-high/80 border border-white/10 text-xs sm:text-body-sm text-on-surface-variant">
               <img
-                src={BRAND_MASCOTS.welcomeAnimated}
-                alt="Mana"
-                className="w-6 h-6 object-contain shrink-0"
+                src={playerProfile?.characterImage || BRAND_MASCOTS.welcomeAnimated}
+                alt="Avatar"
+                className="w-6 h-6 rounded-md object-contain shrink-0"
               />
               <span>
                 {isArMode
-                  ? 'Giơ tay hoặc nghiêng mặt sang Trái (Không AI) / Phải (Có AI)'
+                  ? 'Con trỏ ở giữa • Đưa bàn tay sang Trái (Không AI) / Phải (Có AI)'
                   : 'Chuẩn bị chọn đáp án: KHÔNG CÓ AI hoặc CÓ SỬ DỤNG AI'}
               </span>
             </div>
@@ -1564,18 +1744,23 @@ function GameplayPage({
       >
         {/* HÀNG 1: HUD TỈ SỐ & ĐỒNG HỒ ĐẾM NGƯỢC */}
         <div className="flex items-center justify-between gap-2 px-1 shrink-0">
-          {/* Đội Con Người */}
+          {/* Đội Con Người + Avatar Nhân vật & Tên Người chơi */}
           <div className="flex items-center gap-2 min-w-0">
             <img
-              src={BRAND_MASCOTS.welcomeAnimated}
-              alt="Người"
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-xl bg-primary-container/30 p-1 shrink-0"
+              src={playerProfile?.characterImage || BRAND_MASCOTS.welcomeAnimated}
+              alt={playerProfile?.characterName || 'Người chơi'}
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-xl bg-[#1e1148] border-2 border-emerald-400/70 p-0.5 shrink-0 shadow-[0_0_12px_rgba(52,211,153,0.35)]"
             />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1">
-                <span className="text-[9.5px] sm:text-[10.5px] text-tertiary font-black uppercase tracking-wider">
-                  ĐỘI NGƯỜI
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-white font-black uppercase tracking-wide truncate max-w-[130px] sm:max-w-[180px]">
+                  {playerProfile ? playerProfile.playerName : 'ĐỘI NGƯỜI'}
                 </span>
+                {playerProfile && (
+                  <span className="hidden md:inline-block px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-purple-500/30 text-purple-200 border border-purple-400/30 truncate max-w-[110px]">
+                    {playerProfile.characterName}
+                  </span>
+                )}
                 {winStreak >= 3 && (
                   <span className="px-1.5 py-0.2 rounded-full text-[8.5px] font-black bg-emerald-400 text-[#032117]">
                     🔥 x{winStreak}
@@ -1661,8 +1846,8 @@ function GameplayPage({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_75%,rgba(57,90,210,0.25),transparent)] pointer-events-none" />
 
           {/* Nhãn Sân Người & Sân AI cố định ở mép trên */}
-          <div className="absolute top-2 left-3 z-20 text-[9px] sm:text-[10.5px] font-black text-tertiary uppercase tracking-wider bg-surface-container-high/80 px-2.5 py-0.5 rounded-full border border-white/10 shadow-sm">
-            ◄ SÂN NGƯỜI
+          <div className="absolute top-2 left-3 z-20 text-[9px] sm:text-[10.5px] font-black text-tertiary uppercase tracking-wider bg-surface-container-high/80 px-2.5 py-0.5 rounded-full border border-white/10 shadow-sm flex items-center gap-1.5">
+            <span>◄ {playerProfile ? playerProfile.playerName : 'SÂN NGƯỜI'}</span>
           </div>
 
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 px-3 py-0.5 rounded-full bg-surface-container-high/90 border border-white/15 text-on-surface font-mono text-[10px] sm:text-xs font-bold shadow-md">
@@ -1742,7 +1927,13 @@ function GameplayPage({
                 locked={locked || roundCountdown !== null}
                 selectedSide={selectedSide}
                 hasAI={currentQ.hasAI}
+                pointerImage={playerProfile?.characterImage}
+                pointerName={playerProfile?.characterName}
                 onSelectSide={(side, source) => handleLockAnswer(side, source)}
+                onFallbackToMouse={() => {
+                  audio.playClick();
+                  onSelectControlMode?.('mouse');
+                }}
               />
             </div>
           ) : (
@@ -1934,12 +2125,16 @@ function GameplayPage({
             {/* Phần giải nghĩa sư phạm cốt lõi - TẬP TRUNG TỐI ĐA (FOCUS NHẤT) */}
             <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-surface-container/95 via-surface-container to-surface-container/85 border-2 border-tertiary/40 shadow-[0_0_30px_rgba(23,219,229,0.15)] flex flex-col gap-2.5">
               <div className="flex items-center gap-2 text-tertiary text-xs sm:text-sm font-black uppercase tracking-wider">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-tertiary/20 border border-tertiary/40 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-tertiary">psychology</span>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#180c3a] border-2 border-emerald-400/60 p-0.5 flex items-center justify-center shrink-0 shadow-[0_0_14px_rgba(52,211,153,0.35)] overflow-hidden">
+                  <img
+                    src={playerProfile?.characterImage || BRAND_MASCOTS.welcomeAnimated}
+                    alt={playerProfile?.characterName || 'Bạn đồng hành'}
+                    className="w-full h-full object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                  />
                 </div>
                 <span className="font-extrabold text-white text-xs sm:text-sm">GIẢI NGHĨA SƯ PHẠM</span>
-                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-tertiary/20 text-tertiary border border-tertiary/30 font-bold ml-auto">
-                  MANABIE EDTECH
+                <span className="text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-400/30 font-bold ml-auto flex items-center gap-1">
+                  <span>{playerProfile?.characterName || 'BẠN ĐỒNG HÀNH'}</span>
                 </span>
               </div>
               <p className="text-sm sm:text-base md:text-[17px] font-semibold text-white/95 leading-relaxed sm:leading-loose tracking-wide">
@@ -2017,7 +2212,7 @@ function GameplayPage({
                   <span className="block text-tertiary font-semibold">• PHẢI (👉): CÓ SỬ DỤNG AI</span>
                   <span className="block text-outline text-[11px] mt-0.5">
                     {isArMode
-                      ? 'Camera AR: Vẫy tay hoặc nghiêng mặt sang bên muốn chọn và giữ 1 giây.'
+                      ? 'Camera AR: Con trỏ đặt ở giữa trước mỗi câu, đưa bàn tay sang bên muốn chọn và giữ 1 giây.'
                       : 'Chuột: Click trực tiếp vào 1 trong 2 thẻ đáp án.'}
                   </span>
                 </div>
@@ -2029,7 +2224,7 @@ function GameplayPage({
                 </span>
                 <div>
                   <strong className="text-on-surface block font-bold">Kéo co & Tính điểm:</strong>
-                  Trả lời đúng giúp Đội Con Người kéo dây <strong>+1.8m (+150 điểm)</strong>. Nếu sai hoặc hết giờ (15s), Đội AI sẽ giật dây ngược lại!
+                  Trả lời đúng giúp Đội Con Người kéo dây <strong>+1.8m (+150 điểm)</strong>. Nếu sai hoặc hết giờ (20s), Đội AI sẽ giật dây ngược lại!
                 </div>
               </div>
             </div>
@@ -2057,16 +2252,45 @@ function GameplayPage({
  * ============================================================================ */
 function SummaryPage({
   stats,
+  playerProfile,
   onReplay,
   onHome,
 }: {
   stats: MatchStats;
+  playerProfile?: PlayerProfile | null;
   onReplay: () => void;
   onHome: () => void;
 }) {
+  const activeProfile =
+    playerProfile ||
+    (stats.playerName && stats.characterId
+      ? {
+          playerName: stats.playerName,
+          characterId: stats.characterId,
+          characterImage: stats.characterImage || getCharacterById(stats.characterId).image,
+          characterName: stats.characterName || getCharacterById(stats.characterId).name,
+        }
+      : null);
+  const activeChar = activeProfile ? getCharacterById(activeProfile.characterId) : null;
   const [victoryPopupOpen, setVictoryPopupOpen] = useState(true);
   const [summaryTab, setSummaryTab] = useState<'dashboard' | 'review'>('dashboard');
   const [filterMode, setFilterMode] = useState<'all' | 'correct' | 'wrong'>('all');
+
+  // Cuộn trang lên đầu ngay khi vào trang Tổng kết và khóa cuộn nền khi Popup mở
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
+  useEffect(() => {
+    if (victoryPopupOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [victoryPopupOpen]);
+
   const accuracy = Math.round((stats.correctCount / Math.max(1, stats.totalQuestions)) * 100);
   const humanWon = stats.humanScore >= stats.aiScore;
   const barWidth = Math.max(25, Math.min(85, Math.round(50 + (stats.ropeMeters / 8) * 35)));
@@ -2106,101 +2330,114 @@ function SummaryPage({
 
   return (
     <div className="flex flex-col w-full gap-3.5 sm:gap-4 relative ppt-page-enter">
-      {/* POPUP KẾT QUẢ TRẬN ĐẤU HIỆN LÊN NGAY KHI KẾT THÚC TRÒ CHƠI */}
-      {victoryPopupOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          onClick={() => setVictoryPopupOpen(false)}
-        >
+      {/* POPUP KẾT QUẢ TRẬN ĐẤU HIỆN LÊN TRỰC TIẾP Ở GIỮA MÀN HÌNH (PORTAL RA DOCUMENT.BODY - KHÔNG BỊ TRÔI CUỘN) */}
+      {victoryPopupOpen &&
+        createPortal(
           <div
-            className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-gradient-to-br from-surface-container-high via-surface-container to-surface-container-lowest p-4 sm:p-6 shadow-[0_32px_90px_rgba(0,0,0,0.65),0_0_50px_rgba(23,219,229,0.2)] border border-tertiary/40 ppt-page-enter"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none animate-fadeIn"
+            onClick={() => setVictoryPopupOpen(false)}
           >
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-tertiary/15 rounded-full blur-3xl pointer-events-none" />
+            <div
+              className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-gradient-to-br from-surface-container-high via-surface-container to-surface-container-lowest p-4 sm:p-5 shadow-[0_32px_90px_rgba(0,0,0,0.75),0_0_50px_rgba(23,219,229,0.25)] border border-tertiary/40 my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute -top-20 -right-20 w-64 h-64 bg-tertiary/15 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex flex-col sm:flex-row items-center gap-3.5 sm:gap-4 mb-3.5 sm:mb-4">
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center rounded-2xl bg-surface-container-lowest/70 border border-white/10 p-1.5">
-                <img
-                  src={BRAND_MASCOTS.welcomeAnimated}
-                  alt="Mana Chúc mừng"
-                  className="w-full h-full object-contain drop-shadow-[0_8px_16px_rgba(23,219,229,0.4)]"
-                />
-              </div>
-
-              <div className="text-center sm:text-left">
-                <div className="inline-flex items-center gap-1.5 mb-1 text-tertiary">
-                  <span className="material-symbols-outlined text-[18px]">emoji_events</span>
-                  <span className="text-[10px] sm:text-label-caps uppercase">KẾT QUẢ MÔ PHỎNG SƯ PHẠM</span>
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-2.5 sm:mb-3">
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center rounded-xl sm:rounded-2xl bg-[#180d33] border-2 border-emerald-400/50 p-1 overflow-hidden shadow-[0_0_20px_rgba(52,211,153,0.35)]">
+                  {activeChar ? (
+                    <CharacterAvatar
+                      character={activeChar}
+                      className="w-full h-full drop-shadow-[0_4px_10px_rgba(52,211,153,0.45)]"
+                    />
+                  ) : (
+                    <img
+                      src={BRAND_MASCOTS.welcomeAnimated}
+                      alt="Mana Chúc mừng"
+                      className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(23,219,229,0.4)]"
+                    />
+                  )}
                 </div>
-                <h2 className="text-headline-md sm:text-headline-lg text-on-surface uppercase">
-                  TỔNG KẾT:{' '}
-                  <span className="text-tertiary block sm:inline">
-                    {humanWon ? 'ĐỘI NGƯỜI CHIẾN THẮNG!' : 'TRẬN ĐẤU CÂN SỨC!'}
+
+                <div className="text-center sm:text-left min-w-0">
+                  <div className="inline-flex items-center gap-1.5 mb-0.5 text-tertiary">
+                    <span className="material-symbols-outlined text-[16px]">emoji_events</span>
+                    <span className="text-[10px] sm:text-label-caps uppercase truncate">
+                      {activeProfile
+                        ? `NGƯỜI CHƠI: ${activeProfile.playerName} • ${activeChar?.name}`
+                        : 'KẾT QUẢ MÔ PHỎNG SƯ PHẠM'}
+                    </span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-black text-on-surface uppercase leading-tight">
+                    TỔNG KẾT:{' '}
+                    <span className="text-tertiary">
+                      {humanWon ? 'ĐỘI NGƯỜI CHIẾN THẮNG!' : 'TRẬN ĐẤU CÂN SỨC!'}
+                    </span>
+                  </h2>
+                </div>
+              </div>
+
+              <p className="text-xs sm:text-body-sm text-on-surface-variant leading-snug mb-2.5 sm:mb-3">
+                Tinh thần đồng đội và tư duy phản biện công nghệ đã làm chủ AI xuất sắc! Thầy cô luôn giữ vai trò định hướng sư phạm cốt lõi.
+              </p>
+
+              {/* Thanh kéo co kết quả trong Popup */}
+              <div className="bg-surface-container-lowest/90 rounded-xl p-2.5 border border-white/10 mb-3">
+                <div className="flex justify-between items-center mb-1 text-[9px] sm:text-label-kicker uppercase">
+                  <span className="text-tertiary font-bold">
+                    ĐỘI NGƯỜI ({stats.ropeMeters >= 0 ? `+${stats.ropeMeters}M` : `${stats.ropeMeters}M`})
                   </span>
-                </h2>
+                  <span className="text-on-surface-variant font-mono">VẠCH TÂM 0.0M</span>
+                  <span className="text-secondary font-bold">ĐỘI AI</span>
+                </div>
+                <div className="h-2.5 w-full bg-surface-variant rounded-full relative overflow-hidden flex border border-white/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-tertiary to-primary-container rounded-full transition-all duration-1000"
+                    style={{ width: `${barWidth}%` }}
+                  />
+                  <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60 -translate-x-1/2" />
+                </div>
+              </div>
+
+              {/* Nút đóng Popup để xem Dashboard hoặc Thống kê câu hỏi */}
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onReplay}
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-bold transition-colors cursor-pointer border border-white/10 flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">replay</span>
+                  <span>Chơi lại</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setSummaryTab('review');
+                    setVictoryPopupOpen(false);
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-bold transition-colors cursor-pointer border border-white/10 flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">fact_check</span>
+                  <span>Xem Thống kê</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setSummaryTab('dashboard');
+                    setVictoryPopupOpen(false);
+                  }}
+                  className="pinch-host w-full sm:w-auto px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-tertiary to-emerald-300 text-[#032117] text-xs sm:text-body-sm font-black uppercase tracking-wide shadow-[0_0_20px_rgba(251,191,36,0.45)] hover:brightness-110 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[18px]">emoji_events</span>
+                  <span>XEM DASHBOARD & TOP 1-2-3</span>
+                </button>
               </div>
             </div>
-
-            <p className="text-body-sm sm:text-body-base text-on-surface-variant leading-relaxed mb-4">
-              Tinh thần đồng đội và tư duy phản biện công nghệ đã làm chủ AI xuất sắc! Thầy cô luôn giữ vai trò định hướng sư phạm cốt lõi.
-            </p>
-
-            {/* Thanh kéo co kết quả trong Popup */}
-            <div className="bg-surface-container-lowest/90 rounded-xl p-3 border border-white/10 mb-4">
-              <div className="flex justify-between items-center mb-1.5 text-[9px] sm:text-label-kicker uppercase">
-                <span className="text-tertiary font-bold">
-                  ĐỘI NGƯỜI ({stats.ropeMeters >= 0 ? `+${stats.ropeMeters}M` : `${stats.ropeMeters}M`})
-                </span>
-                <span className="text-on-surface-variant">VẠCH TÂM 0.0M</span>
-                <span className="text-secondary font-bold">ĐỘI AI</span>
-              </div>
-              <div className="h-3 w-full bg-surface-variant rounded-full relative overflow-hidden flex border border-white/10">
-                <div
-                  className="h-full bg-gradient-to-r from-tertiary to-primary-container rounded-full transition-all duration-1000"
-                  style={{ width: `${barWidth}%` }}
-                />
-                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/60 -translate-x-1/2" />
-              </div>
-            </div>
-
-            {/* Nút đóng Popup để xem Dashboard hoặc Thống kê câu hỏi */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={onReplay}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-body-sm sm:text-body-base font-bold transition-colors cursor-pointer border border-white/10 flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[18px]">replay</span>
-                <span>Chơi lại</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setSummaryTab('review');
-                  setVictoryPopupOpen(false);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-body-sm sm:text-body-base font-bold transition-colors cursor-pointer border border-white/10 flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[18px]">fact_check</span>
-                <span>Xem Thống kê câu hỏi</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setSummaryTab('dashboard');
-                  setVictoryPopupOpen(false);
-                }}
-                className="pinch-host w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-amber-400 via-tertiary to-emerald-300 text-[#032117] text-body-base sm:text-headline-sm font-black uppercase tracking-wide shadow-[0_0_20px_rgba(251,191,36,0.45)] hover:brightness-110 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[20px]">emoji_events</span>
-                <span>XEM DASHBOARD & TOP 1-2-3</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* THANH ĐIỀU HƯỚNG TỔNG KẾT VỚI TAB DASHBOARD & THỐNG KÊ CHI TIẾT */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 bg-surface-container-low/85 backdrop-blur-xl px-3 sm:px-4 py-2 rounded-xl shadow-md border border-white/10 ppt-stagger-1">
