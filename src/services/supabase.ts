@@ -95,7 +95,7 @@ export async function fetchLeaderboardFromDb(): Promise<LeaderboardEntry[] | nul
       .order('correct_count', { ascending: false })
       .order('total_duration_sec', { ascending: true })
       .order('score', { ascending: false })
-      .limit(100);
+      .limit(500);
 
     if (error) {
       console.warn('Lỗi truy vấn Supabase leaderboard_entries:', error.message);

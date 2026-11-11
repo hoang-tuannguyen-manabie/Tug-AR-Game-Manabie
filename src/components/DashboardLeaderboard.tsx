@@ -29,7 +29,7 @@ export interface LeaderboardEntry {
 /**
  * Tìm ảnh nhân vật đồng hành của người chơi dựa trên characterId hoặc thông tin lưu trong schoolOrRole
  */
-function resolveEntryCharacter(entry: LeaderboardEntry) {
+export function resolveEntryCharacter(entry: LeaderboardEntry) {
   if (entry.characterId) {
     return getCharacterById(entry.characterId);
   }
@@ -44,7 +44,7 @@ function resolveEntryCharacter(entry: LeaderboardEntry) {
   return PLAYER_CHARACTERS[hash % PLAYER_CHARACTERS.length];
 }
 
-const STORAGE_KEY = 'manabie_tug_leaderboard_2026';
+export const STORAGE_KEY = 'manabie_tug_leaderboard_2026';
 
 /**
  * Quy tắc sắp xếp xếp hạng Dashboard:
@@ -52,7 +52,7 @@ const STORAGE_KEY = 'manabie_tug_leaderboard_2026';
  * 2. Cùng số câu đúng: Thời gian hoàn thành (totalDurationSec) ít hơn (nhanh hơn) -> xếp trên
  * 3. Điểm số (score) cao hơn -> xếp trên
  */
-function sortEntries(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+export function sortEntries(entries: LeaderboardEntry[]): LeaderboardEntry[] {
   return [...entries].sort((a, b) => {
     if (b.correctCount !== a.correctCount) {
       return b.correctCount - a.correctCount;
@@ -64,12 +64,12 @@ function sortEntries(entries: LeaderboardEntry[]): LeaderboardEntry[] {
   });
 }
 
-const ITEMS_PER_PAGE = 20;
+export const ITEMS_PER_PAGE = 20;
 
 /**
  * Sinh danh sách số trang dạng 1, 2, 3... nếu số lượng người chơi đông
  */
-function getPageList(current: number, total: number): Array<number | '...'> {
+export function getPageList(current: number, total: number): Array<number | '...'> {
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
@@ -82,7 +82,7 @@ function getPageList(current: number, total: number): Array<number | '...'> {
   return [1, '...', current - 1, current, current + 1, '...', total];
 }
 
-function loadStoredEntries(): LeaderboardEntry[] {
+export function loadStoredEntries(): LeaderboardEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -99,7 +99,7 @@ function loadStoredEntries(): LeaderboardEntry[] {
   return [];
 }
 
-function saveStoredEntries(entries: LeaderboardEntry[]) {
+export function saveStoredEntries(entries: LeaderboardEntry[]) {
   try {
     const clean = entries.filter(
       (e) => !e.id?.startsWith('seed-') && !e.id?.startsWith('initial-')

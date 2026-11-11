@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { ARGestureTracker, GestureSide } from './components/ARGestureTracker';
 import { DashboardLeaderboard } from './components/DashboardLeaderboard';
+import { HostDashboardPage } from './components/HostDashboardPage';
 import { CharacterAvatar, PlayerSetupModal, SetupStep } from './components/PlayerSetupModal';
 import { BRAND_MASCOTS, MANABIE_LOGO } from './data/brand';
 import {
@@ -101,7 +102,31 @@ function PinchMark({ live }: { live?: boolean }) {
   return <span className={`pinch ${live ? 'pinch-live' : ''}`} aria-hidden="true" />;
 }
 
+/**
+ * Kiểm tra xem URL hiện tại có đang trỏ đến trang /host (Dashboard tổng hợp cho admin/host) hay không.
+ * Hỗ trợ linh hoạt cả path (/host), hash (#/host, #host) và query (?host, ?page=host)
+ * nhằm hoạt động ổn định trên mọi môi trường máy chủ và static build.
+ */
+function checkIsHostRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  const search = window.location.search.toLowerCase();
+  return (
+    path === '/host' ||
+    path.endsWith('/host') ||
+    path.endsWith('/host/') ||
+    hash === '#host' ||
+    hash === '#/host' ||
+    hash.startsWith('#/host') ||
+    search.includes('page=host') ||
+    search.includes('host=true') ||
+    search === '?host'
+  );
+}
+
 export default function App() {
+  const [isHostView, setIsHostView] = useState<boolean>(() => checkIsHostRoute());
   const [page, setPage] = useState<PageStep>('gioi-thieu');
   const [controlMode, setControlMode] = useState<ControlMode>('ar');
   const [muted, setMuted] = useState(false);
@@ -114,8 +139,8 @@ export default function App() {
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(() =>
     loadSavedPlayerProfile()
   );
-  // Tự động mở popup hồ sơ người chơi & nhân vật ngay từ khi mới vào đầu trang
-  const [playerSetupOpen, setPlayerSetupOpen] = useState(true);
+  // Tự động mở popup hồ sơ người chơi & nhân vật ngay từ khi mới vào đầu trang (bỏ qua nếu đang ở trang /host)
+  const [playerSetupOpen, setPlayerSetupOpen] = useState(() => !checkIsHostRoute());
   const [playerSetupInitialStep, setPlayerSetupInitialStep] = useState<SetupStep>(() => {
     const saved = loadSavedPlayerProfile();
     return saved ? 'confirm' : 'name';
@@ -272,6 +297,50 @@ export default function App() {
       document.exitFullscreen?.().catch(() => undefined);
     }
   };
+
+  const navigateToHost = () => {
+    audio.init();
+    audio.playClick();
+    try {
+      window.history.pushState(null, '', '/host');
+    } catch {
+      window.location.hash = '#/host';
+    }
+    setIsHostView(true);
+  };
+
+  const navigateToGame = () => {
+    audio.init();
+    audio.playClick();
+    try {
+      window.history.pushState(null, '', '/');
+    } catch {
+      window.location.hash = '';
+    }
+    setIsHostView(false);
+  };
+
+  // Đồng bộ trạng thái khi người dùng nhấn nút Back/Forward của trình duyệt hoặc đổi hash
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const isHost = checkIsHostRoute();
+      setIsHostView(isHost);
+      if (isHost) {
+        setPlayerSetupOpen(false);
+      }
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  // MÀN HÌNH HOST / ADMIN DASHBOARD ĐỘC LẬP TẠI ROUTE /host
+  if (isHostView) {
+    return <HostDashboardPage onNavigateToGame={navigateToGame} />;
+  }
 
   return (
     <div
