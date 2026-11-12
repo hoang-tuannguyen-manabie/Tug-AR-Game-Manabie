@@ -13,11 +13,48 @@ import {
   isSupabaseConfigured,
   fetchLeaderboardFromDb,
   clearLeaderboardInDb,
+  deleteLeaderboardEntriesInDb,
   subscribeLeaderboardChanges,
 } from '../services/supabase';
 import { MANABIE_LOGO } from '../data/brand';
 import { TUG_QUESTIONS } from '../data/questions';
 import { audio } from '../utils/audio';
+
+/**
+ * Chuyển timestamp (ms) thành định dạng ngày YYYY-MM-DD theo múi giờ địa phương
+ */
+export function getDateKey(ts?: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Lấy key ngày hôm nay theo YYYY-MM-DD
+ */
+export function getTodayDateKey(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format dateKey YYYY-MM-DD sang tiếng Việt dạng "DD/MM/YYYY"
+ */
+export function formatDisplayDate(dateKey: string): string {
+  if (!dateKey) return '';
+  const parts = dateKey.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateKey;
+}
 
 interface HostDashboardPageProps {
   onNavigateToGame: () => void;
@@ -30,6 +67,9 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
   const [lastUpdated, setLastUpdated] = useState<string>(() =>
     new Date().toLocaleTimeString('vi-VN')
   );
+
+  // Bộ lọc theo ngày tập huấn ('all' = tất cả các ngày, hoặc 'YYYY-MM-DD')
+  const [selectedDate, setSelectedDate] = useState<string>('all');
 
   // Search, Filters & Sorting
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,8 +154,57 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
     }
   };
 
-  // Xóa toàn bộ kết quả để bắt đầu lượt đấu mới
-  const handleResetLeaderboard = async () => {
+  // Thông tin ngày hôm nay và danh sách các ngày tập huấn có dữ liệu
+  const todayKey = getTodayDateKey();
+
+  const availableDates = useMemo(() => {
+    const countMap = new Map<string, number>();
+    entries.forEach((e) => {
+      const key = getDateKey(e.timestamp);
+      if (key) {
+        countMap.set(key, (countMap.get(key) || 0) + 1);
+      }
+    });
+    // Sắp xếp ngày mới nhất lên đầu
+    return Array.from(countMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [entries]);
+
+  const todayCount = useMemo(() => {
+    return entries.filter((e) => getDateKey(e.timestamp) === todayKey).length;
+  }, [entries, todayKey]);
+
+  // Danh sách dữ liệu sau khi lọc theo ngày được chọn
+  const dateFilteredEntries = useMemo(() => {
+    if (selectedDate === 'all') {
+      return entries;
+    }
+    return entries.filter((e) => getDateKey(e.timestamp) === selectedDate);
+  }, [entries, selectedDate]);
+
+  // Đổi ngày thì tự động quay về trang 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate]);
+
+  // Xóa chỉ dữ liệu của ngày đang được chọn
+  const handleResetSelectedDate = async () => {
+    audio.playClick();
+    if (selectedDate === 'all') {
+      return handleResetAll();
+    }
+    const toDelete = entries.filter((e) => getDateKey(e.timestamp) === selectedDate);
+    const remaining = entries.filter((e) => getDateKey(e.timestamp) !== selectedDate);
+    setEntries(remaining);
+    saveStoredEntries(remaining);
+    setShowResetConfirm(false);
+    if (toDelete.length > 0) {
+      await deleteLeaderboardEntriesInDb(toDelete.map((e) => e.id));
+    }
+    setLastUpdated(new Date().toLocaleTimeString('vi-VN'));
+  };
+
+  // Xóa toàn bộ kết quả tất cả các ngày
+  const handleResetAll = async () => {
     audio.playClick();
     localStorage.removeItem(STORAGE_KEY);
     setEntries([]);
@@ -124,11 +213,11 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
     setLastUpdated(new Date().toLocaleTimeString('vi-VN'));
   };
 
-  // Xuất file CSV báo cáo kết quả kèm UTF-8 BOM
+  // Xuất file CSV báo cáo kết quả kèm UTF-8 BOM cho ngày đang chọn
   const handleExportCsv = () => {
     audio.playClick();
-    if (entries.length === 0) {
-      alert('Chưa có dữ liệu đấu thủ để xuất báo cáo.');
+    if (dateFilteredEntries.length === 0) {
+      alert('Chưa có dữ liệu đấu thủ trong ngày đã chọn để xuất báo cáo.');
       return;
     }
 
@@ -147,7 +236,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
       'Thời Điểm Ghi Nhận',
     ];
 
-    const sortedAll = sortEntries(entries);
+    const sortedAll = sortEntries(dateFilteredEntries);
     const rows = sortedAll.map((e, idx) => {
       const char = resolveEntryCharacter(e);
       const acc = Math.round((e.correctCount / Math.max(1, e.totalQuestions)) * 100);
@@ -173,27 +262,28 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     const timeStamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dateSuffix = selectedDate === 'all' ? 'Tat_Ca_Cac_Ngay' : `Ngay_${selectedDate}`;
     link.setAttribute('href', url);
-    link.setAttribute('download', `Manabie_Keo_Co_AI_Bao_Cao_${timeStamp}.csv`);
+    link.setAttribute('download', `Manabie_Keo_Co_AI_Bao_Cao_${dateSuffix}_${timeStamp}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  // Danh sách Top 3 người chơi dẫn đầu
+  // Danh sách Top 3 người chơi dẫn đầu theo ngày đang chọn
   const top3 = useMemo(() => {
-    const sorted = sortEntries(entries);
+    const sorted = sortEntries(dateFilteredEntries);
     return {
       first: sorted[0] || null,
       second: sorted[1] || null,
       third: sorted[2] || null,
     };
-  }, [entries]);
+  }, [dateFilteredEntries]);
 
-  // Bộ lọc và tìm kiếm
+  // Bộ lọc và tìm kiếm trên danh sách ngày đang chọn
   const filteredList = useMemo(() => {
-    let list = sortEntries(entries);
+    let list = sortEntries(dateFilteredEntries);
 
     // Tìm kiếm theo tên hoặc thông tin
     if (searchTerm.trim()) {
@@ -230,7 +320,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
     }
 
     return list;
-  }, [entries, searchTerm, modeFilter, perfFilter, sortOption]);
+  }, [dateFilteredEntries, searchTerm, modeFilter, perfFilter, sortOption]);
 
   // Phân trang 20 người/trang
   const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
@@ -377,6 +467,120 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
       {/* NỘI DUNG CHÍNH */}
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         {/* ===================================================================
+         * KHỐI ĐIỀU KHIỂN: THEO DÕI THEO NGÀY TẬP HUẤN (WORKSHOP DATE TRACKER)
+         * =================================================================== */}
+        <section
+          aria-label="Bộ lọc ngày tập huấn"
+          className="relative p-3.5 sm:p-4 rounded-2xl bg-surface-container-high/70 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
+        >
+          {/* Thông tin ngày đang chọn */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-tertiary/20 border border-tertiary/40 flex items-center justify-center shrink-0 text-tertiary shadow-sm">
+              <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black uppercase text-white tracking-wide">
+                  THEO DÕI THEO BUỔI TẬP HUẤN
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-white/10 text-tertiary border border-tertiary/30">
+                  {selectedDate === 'all'
+                    ? '🌐 Tất cả các ngày'
+                    : selectedDate === todayKey
+                    ? `📅 Hôm nay (${formatDisplayDate(todayKey)})`
+                    : `📅 Ngày ${formatDisplayDate(selectedDate)}`}
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant truncate">
+                Đang hiển thị <strong className="text-white font-mono">{dateFilteredEntries.length}</strong> đấu thủ
+                {selectedDate !== 'all'
+                  ? ` trong buổi tập huấn ngày ${formatDisplayDate(selectedDate)}`
+                  : ' qua toàn bộ các buổi tập huấn'}
+              </p>
+            </div>
+          </div>
+
+          {/* Các nút bấm chọn nhanh, Dropdown và Date Picker */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Nút 1: Tất cả các ngày */}
+            <button
+              type="button"
+              onClick={() => {
+                audio.playClick();
+                setSelectedDate('all');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                selectedDate === 'all'
+                  ? 'bg-gradient-to-r from-tertiary to-emerald-400 text-[#032117] font-black border-tertiary shadow-[0_0_15px_rgba(23,219,229,0.35)]'
+                  : 'bg-surface-container hover:bg-surface-container-highest text-on-surface border-white/10'
+              }`}
+              title="Xem bảng xếp hạng tổng hợp tất cả các ngày"
+            >
+              <span className="material-symbols-outlined text-[16px]">public</span>
+              <span>Tất cả</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">
+                {entries.length}
+              </span>
+            </button>
+
+            {/* Nút 2: Hôm nay */}
+            <button
+              type="button"
+              onClick={() => {
+                audio.playClick();
+                setSelectedDate(todayKey);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                selectedDate === todayKey
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
+                  : 'bg-surface-container hover:bg-surface-container-highest text-amber-300 border-amber-400/20'
+              }`}
+              title="Xem bảng xếp hạng buổi tập huấn hôm nay"
+            >
+              <span className="material-symbols-outlined text-[16px]">today</span>
+              <span>Hôm nay</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">
+                {todayCount}
+              </span>
+            </button>
+
+            {/* Dropdown danh sách các ngày có dữ liệu */}
+            {availableDates.length > 0 && (
+              <select
+                value={selectedDate}
+                onChange={(e) => {
+                  audio.playClick();
+                  setSelectedDate(e.target.value);
+                }}
+                className="px-2.5 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-white focus:outline-none focus:border-tertiary cursor-pointer font-bold"
+                title="Chọn ngày từ danh sách các buổi tập huấn trước"
+              >
+                <option value="all">-- Chọn buổi tập huấn --</option>
+                {availableDates.map(([dKey, cnt]) => (
+                  <option key={dKey} value={dKey}>
+                    {dKey === todayKey ? '★ Hôm nay: ' : ''}Ngày {formatDisplayDate(dKey)} ({cnt} đấu thủ)
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Date Picker thủ công */}
+            <input
+              type="date"
+              value={selectedDate !== 'all' ? selectedDate : ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  audio.playClick();
+                  setSelectedDate(e.target.value);
+                }
+              }}
+              title="Chọn ngày cụ thể từ lịch"
+              className="px-2.5 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-white focus:outline-none focus:border-tertiary cursor-pointer font-mono"
+            />
+          </div>
+        </section>
+
+        {/* ===================================================================
          * KHỐI 1: BỤC VINH DANH TOP 1 - 2 - 3 (GRAND STAGE PODIUM)
          * =================================================================== */}
         <section aria-label="Bục vinh danh Top 3" className="relative p-4 sm:p-6 rounded-3xl bg-gradient-to-b from-surface-container-high/60 via-surface-container/40 to-surface-container-lowest/80 border border-white/10 shadow-2xl overflow-hidden">
@@ -384,8 +588,15 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-amber-400 text-[26px]">military_tech</span>
               <div>
-                <h2 className="text-base sm:text-xl font-black uppercase text-white tracking-wide">
-                  BẢNG VINH DANH TOP 1 - 2 - 3
+                <h2 className="text-base sm:text-xl font-black uppercase text-white tracking-wide flex items-center gap-2 flex-wrap">
+                  <span>BẢNG VINH DANH TOP 1 - 2 - 3</span>
+                  <span className="text-xs sm:text-sm font-bold text-tertiary normal-case">
+                    {selectedDate === 'all'
+                      ? '• Toàn bộ thời gian'
+                      : selectedDate === todayKey
+                      ? `• Hôm nay (${formatDisplayDate(todayKey)})`
+                      : `• Buổi ngày ${formatDisplayDate(selectedDate)}`}
+                  </span>
                 </h2>
                 <p className="text-[11px] sm:text-xs text-on-surface-variant">
                   Tiêu chí xếp hạng: Số câu đúng nhiều nhất → Thời gian hoàn thành nhanh nhất → Điểm số
@@ -401,7 +612,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 setShowResetConfirm(true);
               }}
               className="px-3 py-1.5 rounded-xl bg-error/15 hover:bg-error/25 text-error border border-error/30 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Đặt lại toàn bộ Bảng xếp hạng trước giờ G"
+              title={selectedDate !== 'all' ? `Đặt lại kết quả ngày ${formatDisplayDate(selectedDate)}` : 'Đặt lại toàn bộ Bảng xếp hạng'}
             >
               <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
               <span className="hidden sm:inline">Đặt lại BXH</span>
@@ -506,7 +717,9 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   <span className="text-3xl mb-1">👑</span>
                   <span className="text-sm font-black uppercase text-amber-300">Chờ Đón Quán Quân</span>
                   <p className="text-[11px] text-on-surface-variant max-w-[200px] mt-1">
-                    Bắt đầu trận đấu để ghi tên đấu thủ đầu tiên lên đỉnh vinh quang!
+                    {selectedDate !== 'all'
+                      ? `Chưa có đấu thủ thi đấu trong ngày ${formatDisplayDate(selectedDate)}`
+                      : 'Bắt đầu trận đấu để ghi tên đấu thủ đầu tiên lên đỉnh vinh quang!'}
                   </p>
                 </div>
               )}
@@ -569,8 +782,20 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[22px] text-tertiary">table_rows</span>
               <div>
-                <h3 className="text-sm sm:text-base font-black text-white uppercase">
-                  DANH SÁCH TOÀN BỘ ĐẤU THỦ ({filteredList.length}/{entries.length})
+                <h3 className="text-sm sm:text-base font-black text-white uppercase flex items-center gap-2 flex-wrap">
+                  <span>DANH SÁCH ĐẤU THỦ</span>
+                  <span className="text-xs text-emerald-300 font-mono">
+                    ({filteredList.length}/{dateFilteredEntries.length})
+                  </span>
+                  {selectedDate !== 'all' ? (
+                    <span className="text-[11px] text-tertiary font-sans font-bold">
+                      • Buổi {selectedDate === todayKey ? 'hôm nay ' : ''}({formatDisplayDate(selectedDate)})
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-on-surface-variant font-sans font-normal">
+                      • Toàn bộ thời gian ({entries.length} lượt)
+                    </span>
+                  )}
                 </h3>
                 <span className="text-[11px] text-on-surface-variant">
                   Hiển thị giới hạn 20 người mỗi trang theo tiêu chuẩn sự kiện
@@ -671,7 +896,11 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                         <span className="material-symbols-outlined text-[32px] text-on-surface-variant/40">
                           inbox
                         </span>
-                        <span>Không tìm thấy đấu thủ nào phù hợp với bộ lọc hiện tại.</span>
+                        <span>
+                          {selectedDate !== 'all'
+                            ? `Chưa có đấu thủ nào trong ngày ${formatDisplayDate(selectedDate)} phù hợp với bộ lọc hiện tại.`
+                            : 'Không tìm thấy đấu thủ nào phù hợp với bộ lọc hiện tại.'}
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -788,7 +1017,18 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
 
                         {/* Cột Thời điểm thi */}
                         <td className="py-3 px-3 sm:px-4 text-center text-[10.5px] text-on-surface-variant font-mono hidden lg:table-cell">
-                          {entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString('vi-VN') : '—'}
+                          {entry.timestamp ? (
+                            selectedDate === 'all' ? (
+                              <div className="flex flex-col items-center leading-tight">
+                                <span className="text-white/85 font-semibold">{formatDisplayDate(getDateKey(entry.timestamp))}</span>
+                                <span className="text-[9.5px] text-on-surface-variant">{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
+                              </div>
+                            ) : (
+                              <span>{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
+                            )
+                          ) : (
+                            '—'
+                          )}
                         </td>
                       </tr>
                     );
@@ -883,7 +1123,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
       </footer>
 
       {/* ===================================================================
-       * MODAL 1: XÁC NHẬN RESET TOÀN BỘ BẢNG XẾP HẠNG
+       * MODAL 1: XÁC NHẬN RESET BẢNG XẾP HẠNG
        * =================================================================== */}
       {showResetConfirm && (
         <div
@@ -891,18 +1131,31 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
           onClick={() => setShowResetConfirm(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-surface-container-high border-2 border-error/50 p-5 shadow-2xl relative"
+            className="w-full max-w-lg rounded-2xl bg-surface-container-high border-2 border-error/50 p-5 sm:p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 text-error mb-3">
               <span className="material-symbols-outlined text-[32px]">warning</span>
               <h3 className="text-lg font-black uppercase text-white">XÁC NHẬN ĐẶT LẠI BXH</h3>
             </div>
-            <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed mb-4">
-              Thao tác này sẽ <strong className="text-error">xóa toàn bộ danh sách điểm số và đấu thủ</strong> trên cả trình duyệt hiện tại và máy chủ PostgreSQL.
-              Dữ liệu sau khi xóa sẽ không thể phục hồi. Bạn có chắc chắn muốn thực hiện?
-            </p>
-            <div className="flex items-center justify-end gap-2">
+            <div className="text-xs sm:text-sm text-on-surface-variant leading-relaxed mb-5">
+              {selectedDate !== 'all' ? (
+                <div className="space-y-2">
+                  <p>
+                    Bạn đang theo dõi buổi tập huấn <strong className="text-tertiary">Ngày {formatDisplayDate(selectedDate)}</strong> ({dateFilteredEntries.length} lượt đấu).
+                  </p>
+                  <p className="p-3 rounded-xl bg-surface-container-lowest border border-white/10 text-on-surface">
+                    💡 <strong>Gợi ý:</strong> Bạn có thể chọn <span className="text-amber-400 font-bold">Chỉ xóa ngày này</span> để làm sạch dữ liệu cho buổi tập huấn hiện tại mà không làm mất lịch sử các ngày khác.
+                  </p>
+                </div>
+              ) : (
+                <p>
+                  Thao tác này sẽ <strong className="text-error">xóa toàn bộ danh sách điểm số và đấu thủ ({entries.length} người)</strong> trên cả trình duyệt hiện tại và máy chủ cơ sở dữ liệu.
+                  Dữ liệu sau khi xóa sẽ không thể phục hồi.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
@@ -910,12 +1163,21 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
               >
                 Hủy bỏ
               </button>
+              {selectedDate !== 'all' && (
+                <button
+                  type="button"
+                  onClick={handleResetSelectedDate}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-lg"
+                >
+                  Chỉ xóa ngày này ({dateFilteredEntries.length})
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleResetLeaderboard}
+                onClick={handleResetAll}
                 className="px-4 py-2 rounded-xl bg-error hover:bg-error-container text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-lg"
               >
-                Xác nhận Xóa Hết
+                {selectedDate !== 'all' ? `Xóa tất cả (${entries.length})` : 'Xác nhận Xóa Hết'}
               </button>
             </div>
           </div>

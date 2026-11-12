@@ -159,6 +159,29 @@ export async function clearLeaderboardInDb(): Promise<boolean> {
 }
 
 /**
+ * Xóa một danh sách các bản ghi theo ID trên PostgreSQL (dành cho reset theo ngày)
+ */
+export async function deleteLeaderboardEntriesInDb(ids: string[]): Promise<boolean> {
+  if (!supabase || ids.length === 0) return false;
+
+  try {
+    const { error } = await supabase
+      .from('leaderboard_entries')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      console.warn('Lỗi xóa các bản ghi trên Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Lỗi kết nối Supabase khi xóa theo IDs:', err);
+    return false;
+  }
+}
+
+/**
  * Lắng nghe thay đổi Realtime từ PostgreSQL table `leaderboard_entries`
  */
 export function subscribeLeaderboardChanges(onChange: () => void): () => void {
