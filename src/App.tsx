@@ -649,9 +649,9 @@ function WelcomePage({
               <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping" />
             </div>
             <p className="text-xs sm:text-base md:text-lg lg:text-xl landscape:text-xs text-on-surface font-semibold leading-snug">
-              Cùng khám phá cách đưa giáo dục AI vào lớp học thông qua trò chơi kéo co đối kháng giữa{' '}
+              Cùng nhau nhận diện và khám phá sự hiện diện của AI trong cuộc sống thông qua trò chơi kéo co đối kháng giữa{' '}
               <strong className="text-[#15803d] font-black underline decoration-2 decoration-[#16a34a]">Đội Con người</strong> và{' '}
-              <strong className="text-[#2563eb] font-black underline decoration-2 decoration-[#2563eb]">Đội AI</strong>!
+              <strong className="text-[#2563eb] font-black underline decoration-2 decoration-[#2563eb]">Đội AI</strong>.
             </p>
           </div>
         </div>

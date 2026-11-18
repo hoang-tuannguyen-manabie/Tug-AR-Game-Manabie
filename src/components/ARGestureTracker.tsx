@@ -189,6 +189,7 @@ export function ARGestureTracker({
   const mascotRingRef = useRef<HTMLDivElement>(null);
   const mascotPosRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.55 });
   const mascotHasHandRef = useRef(false);
+  const isHandGrabbedRef = useRef(false);
   const lastMascotTransformRef = useRef<string>('');
   const centerReadyTimeRef = useRef<number>(0);
 
@@ -348,6 +349,7 @@ export function ARGestureTracker({
     if (mode === 'quiz') {
       mascotPosRef.current = { x: 0.5, y: 0.55 };
       mascotHasHandRef.current = false;
+      isHandGrabbedRef.current = false;
       lastHandPointsRef.current = [];
       lastMascotTransformRef.current = 'scaleX(1) rotate(0deg)';
       if (mascotContainerRef.current) {
@@ -434,6 +436,7 @@ export function ARGestureTracker({
           miniWaveStartTimeRef.current = performance.now();
           miniWaveResolvedRef.current = false;
           mascotPosRef.current = { x: 0.5, y: 0.55 };
+          isHandGrabbedRef.current = false;
           centerReadyTimeRef.current = performance.now() + 450;
         }
       } catch (err) {
@@ -528,24 +531,26 @@ export function ARGestureTracker({
                       ctx.restore();
                     }
 
-                    // Vùng đệm Hysteresis chống rung giật mép chọn
-                    if (cachedSide === 'LEFT') {
-                      if (mx < 0.46) {
-                        currentSide = 'LEFT';
-                        currentSource = 'hand';
-                      }
-                    } else if (cachedSide === 'RIGHT') {
-                      if (mx > 0.54) {
-                        currentSide = 'RIGHT';
-                        currentSource = 'hand';
-                      }
-                    } else {
-                      if (mx < 0.42) {
-                        currentSide = 'LEFT';
-                        currentSource = 'hand';
-                      } else if (mx > 0.58) {
-                        currentSide = 'RIGHT';
-                        currentSource = 'hand';
+                    // Chỉ phân loại Trái/Phải trực tiếp theo mx khi KHÔNG PHẢI chế độ quiz (ví dụ minigame)
+                    if (mode !== 'quiz') {
+                      if (cachedSide === 'LEFT') {
+                        if (mx < 0.46) {
+                          currentSide = 'LEFT';
+                          currentSource = 'hand';
+                        }
+                      } else if (cachedSide === 'RIGHT') {
+                        if (mx > 0.54) {
+                          currentSide = 'RIGHT';
+                          currentSource = 'hand';
+                        }
+                      } else {
+                        if (mx < 0.42) {
+                          currentSide = 'LEFT';
+                          currentSource = 'hand';
+                        } else if (mx > 0.58) {
+                          currentSide = 'RIGHT';
+                          currentSource = 'hand';
+                        }
                       }
                     }
                   }
@@ -555,8 +560,10 @@ export function ARGestureTracker({
                 // ignore
               }
 
-              cachedSide = currentSide;
-              cachedSource = currentSource;
+              if (mode !== 'quiz') {
+                cachedSide = currentSide;
+                cachedSource = currentSource;
+              }
             }
 
             // Theo dõi phát hiện bàn tay để kích hoạt cảnh báo hỗ trợ nếu không thấy tay sau 3.5s
@@ -577,7 +584,9 @@ export function ARGestureTracker({
             }
 
             // Cập nhật vị trí Mascot chỉ tay mượt mà 60 FPS trên nền Camera trực tiếp:
-            // Luôn đặt con trỏ ở vị trí giữa trước khi bắt đầu câu hỏi rồi mới di chuyển và nhận diện theo tay
+            // Cơ chế chạm bắt: Nhân vật đồng hành luôn chờ ở vị trí trung tâm (0.5, 0.55).
+            // CHỈ KHI người chơi đưa bàn tay tới chạm vào nhân vật mới bắt đầu bắt dính và đi theo tay.
+            // Tránh hoàn toàn việc chống cằm, duỗi tay vô ý, hoặc đưa tay từ hai bên vào bị nhận diện sai.
             if (mode === 'quiz' || isCameraHidden) {
               const hands = lastHandPointsRef.current;
               const isCenterHoldPhase = lockedRef.current || now < centerReadyTimeRef.current;
@@ -587,36 +596,72 @@ export function ARGestureTracker({
                 mascotPosRef.current.x = 0.5;
                 mascotPosRef.current.y = 0.55;
                 mascotHasHandRef.current = false;
+                isHandGrabbedRef.current = false;
                 cachedSide = null;
                 cachedSource = null;
               } else if (hands && hands.length > 0) {
-                const hp = hands[0];
-                const dx = hp.x - mascotPosRef.current.x;
-                const dy = hp.y - mascotPosRef.current.y;
-                // Deadzone loại bỏ rung giật vi mô (micro-jitter)
-                if (Math.abs(dx) > 0.002) {
-                  mascotPosRef.current.x += dx * 0.30;
-                }
-                if (Math.abs(dy) > 0.002) {
-                  mascotPosRef.current.y += dy * 0.30;
-                }
-                mascotHasHandRef.current = true;
+                // Kiểm tra xem bàn tay xòe có đang chạm vào nhân vật đồng hành ở trung tâm hay không
+                const isTouchingMascot = hands.some((pt) => {
+                  const dist = Math.hypot(pt.x - mascotPosRef.current.x, (pt.y - mascotPosRef.current.y) * 1.15);
+                  return dist <= 0.20;
+                });
 
-                // Xác định vùng chọn dựa trên vị trí con trỏ Mana sau khi di chuyển từ trung tâm theo tay
-                const cxPos = mascotPosRef.current.x;
-                if (cachedSide === 'LEFT') {
-                  cachedSide = cxPos < 0.46 ? 'LEFT' : cxPos > 0.58 ? 'RIGHT' : null;
-                } else if (cachedSide === 'RIGHT') {
-                  cachedSide = cxPos > 0.54 ? 'RIGHT' : cxPos < 0.42 ? 'LEFT' : null;
+                if (!isHandGrabbedRef.current) {
+                  // CHƯA CHẠM VÀO NHÂN VẬT:
+                  // Giữ nhân vật chờ ở vị trí trung tâm (0.5, 0.55) và KHÔNG cho chọn Trái / Phải
+                  mascotPosRef.current.x += (0.5 - mascotPosRef.current.x) * 0.16;
+                  mascotPosRef.current.y += (0.55 - mascotPosRef.current.y) * 0.16;
+                  mascotHasHandRef.current = false;
+                  cachedSide = null;
+                  cachedSource = null;
+
+                  // Khi đưa bàn tay tới vị trí nhân vật đồng hành -> Bắt dính & kích hoạt theo tay!
+                  if (isTouchingMascot) {
+                    isHandGrabbedRef.current = true;
+                    mascotHasHandRef.current = true;
+                    audio.playHoverTick();
+                  }
                 } else {
-                  cachedSide = cxPos < 0.42 ? 'LEFT' : cxPos > 0.58 ? 'RIGHT' : null;
+                  // ĐÃ BẮT ĐƯỢC NHÂN VẬT: Nhân vật đi theo tay người chơi
+                  const hp = hands[0];
+                  const distToHand = Math.hypot(hp.x - mascotPosRef.current.x, (hp.y - mascotPosRef.current.y) * 1.15);
+
+                  // Nếu tay giật quá xa (> 0.45) hoặc rời đi -> Nhả nhân vật thả về giữa
+                  if (distToHand > 0.45) {
+                    isHandGrabbedRef.current = false;
+                    mascotHasHandRef.current = false;
+                    cachedSide = null;
+                    cachedSource = null;
+                  } else {
+                    const dx = hp.x - mascotPosRef.current.x;
+                    const dy = hp.y - mascotPosRef.current.y;
+                    // Deadzone loại bỏ rung giật vi mô (micro-jitter)
+                    if (Math.abs(dx) > 0.002) {
+                      mascotPosRef.current.x += dx * 0.35;
+                    }
+                    if (Math.abs(dy) > 0.002) {
+                      mascotPosRef.current.y += dy * 0.35;
+                    }
+                    mascotHasHandRef.current = true;
+
+                    // Xác định vùng chọn Trái / Phải dựa trên vị trí nhân vật đồng hành sau khi kéo từ giữa sang
+                    const cxPos = mascotPosRef.current.x;
+                    if (cachedSide === 'LEFT') {
+                      cachedSide = cxPos < 0.46 ? 'LEFT' : cxPos > 0.58 ? 'RIGHT' : null;
+                    } else if (cachedSide === 'RIGHT') {
+                      cachedSide = cxPos > 0.54 ? 'RIGHT' : cxPos < 0.42 ? 'LEFT' : null;
+                    } else {
+                      cachedSide = cxPos < 0.42 ? 'LEFT' : cxPos > 0.58 ? 'RIGHT' : null;
+                    }
+                    cachedSource = cachedSide ? 'hand' : null;
+                  }
                 }
-                cachedSource = cachedSide ? 'hand' : null;
               } else {
-                // Khi chưa đưa tay lên: thu con trỏ về giữ ở vị trí trung tâm (0.5, 0.55)
+                // Khi chưa đưa tay hoặc đã hạ tay xuống: thu nhân vật về giữ ở vị trí trung tâm (0.5, 0.55)
                 mascotPosRef.current.x += (0.5 - mascotPosRef.current.x) * 0.16;
                 mascotPosRef.current.y += (0.55 - mascotPosRef.current.y) * 0.16;
                 mascotHasHandRef.current = false;
+                isHandGrabbedRef.current = false;
                 cachedSide = null;
                 cachedSource = null;
               }
@@ -641,7 +686,7 @@ export function ARGestureTracker({
                 }
 
                 if (mascotHintRef.current) {
-                  const targetOpacity = mascotHasHandRef.current ? '0' : '1';
+                  const targetOpacity = isHandGrabbedRef.current ? '0' : '1';
                   if (mascotHintRef.current.style.opacity !== targetOpacity) {
                     mascotHintRef.current.style.opacity = targetOpacity;
                   }
@@ -770,10 +815,10 @@ export function ARGestureTracker({
                       activeSide === 'LEFT'
                         ? isCameraHidden
                           ? `👈 ${cName} ĐANG CHỈ TRÁI: KHÔNG CÓ AI (${prog}%)`
-                          : `👈 ĐANG GIỮ BÊN TRÁI: KHÔNG CÓ AI (${prog}%)`
+                          : `👈 ĐANG KÉO BÊN TRÁI: KHÔNG CÓ AI (${prog}%)`
                         : isCameraHidden
                         ? `👉 ${cName} ĐANG CHỈ PHẢI: CÓ AI (${prog}%)`
-                        : `👉 ĐANG GIỮ BÊN PHẢI: CÓ AI (${prog}%)`;
+                        : `👉 ĐANG KÉO BÊN PHẢI: CÓ AI (${prog}%)`;
                   }
 
                   if (mascotRingRef.current) {
@@ -801,10 +846,10 @@ export function ARGestureTracker({
                 if (leftBarRef.current) leftBarRef.current.style.width = '0%';
                 if (rightBarRef.current) rightBarRef.current.style.width = '0%';
                 if (leftTextRef.current) {
-                  leftTextRef.current.textContent = '👈 Đưa tay sang Trái (Giữ 1s)';
+                  leftTextRef.current.textContent = '👈 Kéo sang Trái (Giữ 1s)';
                 }
                 if (rightTextRef.current) {
-                  rightTextRef.current.textContent = 'Đưa tay sang Phải (Giữ 1s) 👉';
+                  rightTextRef.current.textContent = 'Kéo sang Phải (Giữ 1s) 👉';
                 }
                 if (centerBadgeRef.current) centerBadgeRef.current.textContent = 'Ở GIỮA';
                 if (mascotRingRef.current) {
@@ -812,10 +857,13 @@ export function ARGestureTracker({
                   mascotRingRef.current.style.opacity = '0.35';
                 }
                 if (statusBadgeRef.current) {
+                  const cName = companionDisplayNameRef.current.toUpperCase();
                   statusBadgeRef.current.textContent =
                     now < centerReadyTimeRef.current
-                      ? '🎯 ĐANG ĐƯA CON TRỎ VỀ VỊ TRÍ GIỮA...'
-                      : '✋ CON TRỎ Ở GIỮA • ĐƯA TAY TRÁI / PHẢI (GIỮ 1S)';
+                      ? '🎯 ĐANG ĐƯA NHÂN VẬT VỀ VỊ TRÍ GIỮA...'
+                      : isHandGrabbedRef.current
+                      ? `✨ ĐÃ BẮT ${cName} • KÉO SANG TRÁI / PHẢI`
+                      : `✋ ĐƯA BÀN TAY CHẠM ${cName} ĐỂ BẮT ĐẦU KÉO`;
                 }
 
                 if (prevDetectedSideRef.current !== null) {
@@ -866,7 +914,7 @@ export function ARGestureTracker({
             className="text-[9.5px] sm:text-label-kicker text-[#1b3a8a] uppercase px-2.5 py-0.5 rounded-full bg-white border-2 border-[#93c5fd] shadow-xs shrink-0 truncate font-extrabold"
           >
             {status === 'ready'
-              ? '✋ CON TRỎ Ở GIỮA • ĐƯA TAY TRÁI / PHẢI (GIỮ 1S)'
+              ? `✋ ĐƯA BÀN TAY CHẠM ${companionDisplayName.toUpperCase()} ĐỂ BẮT ĐẦU KÉO`
               : status === 'loading'
               ? 'ĐANG BẬT CAMERA AR...'
               : 'CHẠM TRÁI / PHẢI ĐỂ CHỌN'}
@@ -993,13 +1041,13 @@ export function ARGestureTracker({
               />
             </div>
 
-            {/* Gợi ý khi chưa giơ tay */}
+            {/* Gợi ý khi chưa chạm tay vào nhân vật */}
             <div
               ref={mascotHintRef}
               className="mt-0.5 px-2.5 py-0.5 rounded-full mana-camera-pill text-[8.5px] sm:text-[9.5px] font-black whitespace-nowrap flex items-center gap-1.5 transition-opacity duration-200"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#b45309] animate-pulse" />
-              <span>{companionDisplayName} • Giơ tay sang Trái / Phải</span>
+              <span>Chạm tay vào {companionDisplayName} để kéo</span>
             </div>
           </div>
         )}
@@ -1318,7 +1366,7 @@ export function ARGestureTracker({
             front_hand
           </span>
           <span className="leading-snug truncate">
-            Hãy <strong>xòe bàn tay ✋</strong> trước camera để kéo co (hoặc dùng <strong>Chuột / Phím A, D</strong>)
+            Hãy <strong>xòe bàn tay ✋</strong> và chạm vào <strong>{companionDisplayName}</strong> để kéo co (hoặc dùng <strong>Chuột / Phím A, D</strong>)
           </span>
           {onFallbackToMouse && (
             <button
