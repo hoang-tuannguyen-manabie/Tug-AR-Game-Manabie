@@ -324,7 +324,7 @@ export function PlayerSetupModal({
           {step === 'name' && (
             <form
               onSubmit={handleProceedToCharacter}
-              className="flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 landscape:gap-1.5 py-1 sm:py-2 px-2 max-w-md mx-auto w-full flex-1 my-auto ppt-page-enter"
+              className="flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 landscape:gap-1.5 py-1 sm:py-2 px-2 max-w-lg mx-auto w-full flex-1 my-auto ppt-page-enter"
               noValidate
             >
               {/* Avatar xem trước trên nền Pastel Mint */}
@@ -339,15 +339,15 @@ export function PlayerSetupModal({
                 </span>
               </div>
 
-              <div className="flex flex-col gap-0.5 mt-1">
+              <div className="flex flex-col gap-0.5 mt-1 text-center">
                 <h2
                   id="player-setup-title"
                   className="text-base sm:text-xl md:text-2xl landscape:text-sm font-black text-[#1b3a8a] tracking-tight"
                 >
                   Sẵn sàng tham gia thử thách?
                 </h2>
-                <p className="text-[11px] sm:text-xs md:text-sm landscape:text-[10px] text-slate-600 font-semibold">
-                  Nhập tên và chọn nhân vật đồng hành trong Đấu trường Kéo co AI.
+                <p className="text-[11.5px] sm:text-xs md:text-sm landscape:text-[10px] text-slate-600 font-semibold leading-relaxed sm:whitespace-nowrap text-balance">
+                  Nhập tên và chọn nhân vật đồng hành<br className="sm:hidden" /> trong Đấu trường Kéo&nbsp;co&nbsp;AI.
                 </p>
               </div>
 
