@@ -34,6 +34,7 @@ export interface ARGestureTrackerProps {
   onMiniGameComplete?: (score: number, total: number) => void;
   onStartGame?: () => void;
   onFallbackToMouse?: () => void;
+  onStatusChange?: (status: 'loading' | 'ready' | 'error') => void;
   isEnlarged?: boolean;
   onToggleEnlarge?: () => void;
 }
@@ -54,6 +55,78 @@ const BASE_TARGET_ZONES: Array<{ x: number; y: number; side: 'LEFT' | 'RIGHT'; l
   { x: 0.22, y: 0.64, side: 'LEFT', label: 'Trái thấp' },
   { x: 0.78, y: 0.64, side: 'RIGHT', label: 'Phải thấp' },
 ];
+
+function dist3d(p1: { x: number; y: number; z?: number }, p2: { x: number; y: number; z?: number }) {
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  const dz = (p1.z ?? 0) - (p2.z ?? 0);
+  return Math.hypot(dx, dy, dz);
+}
+
+/**
+ * Kiểm tra bàn tay có đang XÒE RA (Open / Spread hand) hay không.
+ * Ngăn chặn nhận diện nhầm khi người chơi đang chống cằm, nắm tay, hoặc cử chỉ vô ý.
+ */
+function isOpenHand(lm: Array<{ x: number; y: number; z?: number }>): boolean {
+  if (!lm || lm.length < 21) return false;
+
+  const wrist = lm[0];
+
+  // 4 ngón dài chính: Ngón trỏ, Ngón giữa, Ngón áp út, Ngón út
+  const longFingers = [
+    { mcp: 5, pip: 6, dip: 7, tip: 8 },    // Trỏ
+    { mcp: 9, pip: 10, dip: 11, tip: 12 }, // Giữa
+    { mcp: 13, pip: 14, dip: 15, tip: 16 },// Áp út
+    { mcp: 17, pip: 18, dip: 19, tip: 20 },// Út
+  ];
+
+  let extendedCount = 0;
+
+  for (const f of longFingers) {
+    const tip = lm[f.tip];
+    const pip = lm[f.pip];
+    const mcp = lm[f.mcp];
+
+    const dTipWrist = dist3d(tip, wrist);
+    const dPipWrist = dist3d(pip, wrist);
+    const dMcpWrist = dist3d(mcp, wrist);
+    const dTipMcp = dist3d(tip, mcp);
+    const dPipMcp = dist3d(pip, mcp);
+
+    // Ngón tay duỗi thẳng:
+    // 1. Đầu ngón (tip) xa cổ tay (wrist) hơn khớp giữa (pip)
+    // 2. Đầu ngón xa cổ tay hơn khớp đốt bàn (mcp)
+    // 3. Khoảng cách tip-mcp lớn hơn pip-mcp (ngón không bị gập gối vào lòng bàn tay)
+    if (dTipWrist > dPipWrist * 1.08 && dTipWrist > dMcpWrist * 1.15 && dTipMcp > dPipMcp * 1.12) {
+      extendedCount++;
+    }
+  }
+
+  // Ngón cái
+  const thumbTip = lm[4];
+  const thumbMcp = lm[2];
+  const thumbIp = lm[3];
+  const pinkyMcp = lm[17];
+
+  const dThumbWrist = dist3d(thumbTip, wrist);
+  const dThumbMcpWrist = dist3d(thumbMcp, wrist);
+  const dThumbPinky = dist3d(thumbTip, pinkyMcp);
+  const dThumbIpPinky = dist3d(thumbIp, pinkyMcp);
+
+  if (dThumbWrist > dThumbMcpWrist * 1.08 && dThumbPinky > dThumbIpPinky * 1.05) {
+    extendedCount++;
+  }
+
+  // Độ xòe của các ngón tay: khoảng cách giữa đầu ngón trỏ và đầu ngón út
+  const palmWidth = dist3d(lm[5], lm[17]); // Bề rộng lòng bàn tay
+  const fingerSpread = dist3d(lm[8], lm[20]); // Khoảng cách giữa ngón trỏ và ngón út
+
+  // Bàn tay xòe ra:
+  // - Ít nhất 4 trong 5 ngón duỗi thẳng (ví dụ: 4 ngón dài trỏ-giữa-áp út-út, hoặc ngón cái + 3 ngón)
+  // - Các ngón tay có độ xòe tự nhiên (không nắm lại hay chụm chặt)
+  // Khi người chơi chống cằm, các ngón tay thường co/gập (chỉ 0-2 ngón duỗi), sẽ bị bỏ qua hoàn toàn.
+  return extendedCount >= 4 && fingerSpread > palmWidth * 0.75;
+}
 
 function generate10Targets(): MiniGameTarget[] {
   const shuffled = [...BASE_TARGET_ZONES].sort(() => Math.random() - 0.5);
@@ -86,9 +159,10 @@ export function ARGestureTracker({
   onMiniGameComplete,
   onStartGame,
   onFallbackToMouse,
+  onStatusChange,
 }: ARGestureTrackerProps) {
-  // Ở mục 3 phần chơi AR: mặc định không hiển thị camera, thay bằng nhân vật pointer chỉ tay trên nền đen
-  const isCameraHidden = hideCamera ?? (mode === 'quiz');
+  // Ở mục 3 phần chơi AR: luôn hiển thị trực tiếp Camera thực tế kết hợp nhân vật đồng hành chỉ tay
+  const isCameraHidden = Boolean(hideCamera);
 
   const activePointerImage = pointerImage || BRAND_MASCOTS.interact;
   const companionDisplayName = pointerName || 'Mana';
@@ -132,6 +206,10 @@ export function ARGestureTracker({
   const [retryTrigger, setRetryTrigger] = useState(0);
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
   const [detectedSide, setDetectedSide] = useState<GestureSide>(null);
   const [detectedSource, setDetectedSource] = useState<'hand' | 'face' | null>(null);
 
@@ -415,6 +493,11 @@ export function ARGestureTracker({
 
                 if (handRes?.landmarks && handRes.landmarks.length > 0) {
                   for (const lm of handRes.landmarks) {
+                    // CHỈ NHẬN DIỆN KHI BÀN TAY XÒE RA (Tránh nhận diện nhầm khi người chơi đang chống cằm, nắm tay)
+                    if (!isOpenHand(lm)) {
+                      continue;
+                    }
+
                     const wrist = lm[0];
                     const middleTip = lm[12];
                     const indexTip = lm[8];
@@ -493,9 +576,9 @@ export function ARGestureTracker({
               }
             }
 
-            // Cập nhật vị trí Mascot chỉ tay mượt mà 60 FPS:
+            // Cập nhật vị trí Mascot chỉ tay mượt mà 60 FPS trên nền Camera trực tiếp:
             // Luôn đặt con trỏ ở vị trí giữa trước khi bắt đầu câu hỏi rồi mới di chuyển và nhận diện theo tay
-            if (isCameraHidden) {
+            if (mode === 'quiz' || isCameraHidden) {
               const hands = lastHandPointsRef.current;
               const isCenterHoldPhase = lockedRef.current || now < centerReadyTimeRef.current;
 
@@ -768,62 +851,58 @@ export function ARGestureTracker({
 
   return (
     <div className={`relative w-full h-full flex flex-col min-h-0 overflow-hidden ${className || ''}`}>
-      {/* Thanh trạng thái AR tinh gọn (chỉ hiển thị ở chế độ Quiz, ẩn khi ở chế độ minigame thử nghiệm) */}
+      {/* Thanh trạng thái AR kiểu "Ô giơ tay" Mana Oẳn Tù Xì */}
       {mode !== 'minigame' && (
-        <div className="flex items-center justify-between gap-2 px-1 pb-1 shrink-0">
+        <div className="flex items-center justify-between gap-2 px-1 pb-1.5 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-ping shrink-0" />
-            <span className="text-[10px] sm:text-label-caps text-tertiary font-bold uppercase truncate">
-              {isCameraHidden ? `ĐIỀU KHIỂN CỬ CHỈ AR • ${companionDisplayName.toUpperCase()} CHỈ TAY` : 'CAMERA AR • NHẬN DIỆN BÀN TAY'}
+            <span className="mana-camera-pill px-2.5 py-0.5 rounded-full text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <span>🖐️</span>
+              <span>GIƠ BÀN TAY VÀO KHUNG CAMERA</span>
             </span>
           </div>
 
           <span
             ref={statusBadgeRef}
-            className="text-[9.5px] sm:text-label-kicker text-on-surface-variant uppercase px-2.5 py-0.5 rounded-full bg-surface-container-high border border-white/10 shrink-0 truncate font-semibold"
+            className="text-[9.5px] sm:text-label-kicker text-[#1b3a8a] uppercase px-2.5 py-0.5 rounded-full bg-white border-2 border-[#93c5fd] shadow-xs shrink-0 truncate font-extrabold"
           >
             {status === 'ready'
               ? '✋ CON TRỎ Ở GIỮA • ĐƯA TAY TRÁI / PHẢI (GIỮ 1S)'
               : status === 'loading'
-              ? isCameraHidden
-                ? 'ĐANG KÍCH HOẠT NHẬN DIỆN AR...'
-                : 'ĐANG BẬT CAMERA...'
+              ? 'ĐANG BẬT CAMERA AR...'
               : 'CHẠM TRÁI / PHẢI ĐỂ CHỌN'}
           </span>
         </div>
       )}
 
-      {/* Màn hình AR lấp đầy không gian còn lại (flex-1 min-h-0) - Background Đen khi ẩn cam */}
+      {/* Khung Camera AR trực tiếp viền Vàng Hổ Phách chuẩn Mana Oẳn Tù Xì - Luôn hiển thị Camera sống động */}
       <div
-        className={`relative flex-1 w-full min-h-0 rounded-xl overflow-hidden ${
-          isCameraHidden ? 'bg-black' : 'bg-surface-container-high'
-        } flex items-center justify-center border border-white/10`}
+        className={`relative flex-1 w-full min-h-0 rounded-2xl overflow-hidden mana-camera-frame ${
+          isCameraHidden ? 'bg-slate-900' : 'bg-[#dbeafe]'
+        } flex items-center justify-center`}
       >
         {status === 'loading' && (
-          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-3 text-center z-30">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-4 py-2 rounded-2xl bg-white/95 border-2 border-[#93c5fd] shadow-md text-center z-30">
             <img
               src={BRAND_MASCOTS.cameraWaitAnimated}
               alt="Mana Camera Wait"
               className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
             />
-            <span className="text-xs sm:text-body-sm text-on-surface-variant font-semibold">
-              {isCameraHidden
-                ? 'Đang kích hoạt nhận diện cử chỉ bàn tay AR...'
-                : 'Đang bật Camera AR nhận diện bàn tay...'}
+            <span className="text-xs sm:text-body-sm text-[#1b3a8a] font-bold">
+              Đang bật Camera AR nhận diện bàn tay trực tiếp...
             </span>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="absolute inset-0 z-30 bg-[#060913]/95 backdrop-blur-md p-4 sm:p-6 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-error/15 border border-error/30 flex items-center justify-center text-error shadow-[0_0_24px_rgba(255,180,171,0.2)]">
+          <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-md p-4 sm:p-6 flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-100 border-2 border-red-300 flex items-center justify-center text-red-600 shadow-sm">
               <span className="material-symbols-outlined text-[28px] sm:text-[32px]">videocam_off</span>
             </div>
             <div className="flex flex-col gap-1 max-w-sm">
-              <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-wide">
+              <h4 className="text-xs sm:text-sm font-black text-[#1b3a8a] uppercase tracking-wide">
                 Không thể truy cập Camera AR
               </h4>
-              <p className="text-[11px] sm:text-xs text-on-surface-variant leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-medium">
                 Quyền camera bị chặn hoặc thiết bị không có webcam. Bạn có thể bấm Thử lại hoặc chuyển sang chế độ Chuột & Phím để chơi ngay!
               </p>
             </div>
@@ -831,7 +910,7 @@ export function ARGestureTracker({
               <button
                 type="button"
                 onClick={() => setRetryTrigger((r) => r + 1)}
-                className="px-3.5 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-white text-xs font-bold border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
+                className="btn-mana-blue px-4 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">refresh</span>
                 <span>Thử lại Camera</span>
@@ -840,7 +919,7 @@ export function ARGestureTracker({
                 <button
                   type="button"
                   onClick={onFallbackToMouse}
-                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] text-xs font-black hover:brightness-110 transition-all flex items-center gap-1.5 shadow-[0_4px_16px_rgba(23,219,229,0.35)] cursor-pointer"
+                  className="btn-mana-orange px-4 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[15px]">mouse</span>
                   <span>Chơi bằng Chuột & Phím</span>
@@ -850,10 +929,11 @@ export function ARGestureTracker({
           </div>
         )}
 
+        {/* LUÔN HIỂN THỊ VIDEO CAMERA TRỰC TIẾP SẮC NÉT KHI CHƠI AR */}
         <video
           ref={videoRef}
           className={`absolute inset-0 w-full h-full object-cover -scale-x-100 ${
-            isCameraHidden ? 'opacity-0 pointer-events-none' : 'opacity-85'
+            isCameraHidden ? 'opacity-0 pointer-events-none' : 'opacity-95'
           } ${status === 'ready' ? 'block' : 'hidden'}`}
           playsInline
           muted
@@ -863,17 +943,15 @@ export function ARGestureTracker({
           className="absolute inset-0 w-full h-full pointer-events-none z-10"
         />
 
-        {/* NỀN ĐEN SÂN ĐẤU CYBER (KHI ẨN CAM) */}
-        {isCameraHidden && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-10">
-            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px border-l-2 border-dashed border-tertiary/40" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border border-tertiary/20" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full border border-white/5" />
+        {/* Đường phân tách trung tâm thanh mảnh trên nền Camera */}
+        {status === 'ready' && mode === 'quiz' && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 border-l-2 border-dashed border-white/60" />
           </div>
         )}
 
-        {/* MASCOT CHỈ TAY DI CHUYỂN THEO TAY (MỤC 3 PHẦN CHƠI AR - BACKGROUND ĐEN) */}
-        {isCameraHidden && status === 'ready' && (
+        {/* CON TRỎ NHÂN VẬT ĐỒNG HÀNH CHỈ TAY DI CHUYỂN TRỰC TIẾP TRÊN NỀN CAMERA */}
+        {(mode === 'quiz' || isCameraHidden) && status === 'ready' && (
           <div
             ref={mascotContainerRef}
             className="absolute z-25 pointer-events-none -translate-x-1/2 -translate-y-1/2 will-change-[left,top] flex flex-col items-center select-none"
@@ -884,12 +962,12 @@ export function ARGestureTracker({
           >
             {/* Hào quang phát sáng theo cử chỉ */}
             <div
-              className={`absolute -inset-4 rounded-full blur-xl pointer-events-none transition-colors duration-200 ${
+              className={`absolute -inset-3 rounded-full blur-lg pointer-events-none transition-colors duration-200 ${
                 detectedSide === 'LEFT'
-                  ? 'bg-secondary/40'
+                  ? 'bg-emerald-400/55'
                   : detectedSide === 'RIGHT'
-                  ? 'bg-tertiary/40'
-                  : 'bg-primary/20'
+                  ? 'bg-blue-400/55'
+                  : 'bg-amber-400/35'
               }`}
             />
 
@@ -899,18 +977,18 @@ export function ARGestureTracker({
                 ref={mascotImgRef}
                 src={activePointerImage}
                 alt={pointerName ? `${pointerName} con trỏ` : "Nhân vật chỉ tay"}
-                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-[0_8px_24px_rgba(23,219,229,0.55)] will-change-transform"
+                className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.55)] will-change-transform"
               />
 
-              {/* Vòng con trỏ laser tại đầu con trỏ / đỉnh nhân vật */}
+              {/* Vòng con trỏ tại đỉnh nhân vật */}
               <div
                 ref={mascotRingRef}
                 className={`absolute -top-1 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full pointer-events-none shadow-lg will-change-transform ${
                   detectedSide === 'LEFT'
-                    ? 'bg-secondary border border-white shadow-[0_0_16px_rgba(182,196,255,0.9)]'
+                    ? 'bg-[#16a34a] border-2 border-white shadow-[0_0_16px_rgba(22,163,74,0.9)]'
                     : detectedSide === 'RIGHT'
-                    ? 'bg-tertiary border border-white shadow-[0_0_16px_rgba(23,219,229,0.9)]'
-                    : 'bg-emerald-400 border border-white/80 shadow-[0_0_12px_rgba(16,185,129,0.8)]'
+                    ? 'bg-[#2563eb] border-2 border-white shadow-[0_0_16px_rgba(37,99,235,0.9)]'
+                    : 'bg-[#f47920] border-2 border-white shadow-[0_0_12px_rgba(244,121,32,0.85)]'
                 }`}
               />
             </div>
@@ -918,10 +996,10 @@ export function ARGestureTracker({
             {/* Gợi ý khi chưa giơ tay */}
             <div
               ref={mascotHintRef}
-              className="mt-0.5 px-2.5 py-0.5 rounded-full bg-black/90 border border-tertiary/40 text-[8.5px] sm:text-[9.5px] text-tertiary font-bold whitespace-nowrap shadow-md flex items-center gap-1.5 transition-opacity duration-200"
+              className="mt-0.5 px-2.5 py-0.5 rounded-full mana-camera-pill text-[8.5px] sm:text-[9.5px] font-black whitespace-nowrap flex items-center gap-1.5 transition-opacity duration-200"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-              <span>{companionDisplayName} • Đưa tay sang Trái / Phải để chọn</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#b45309] animate-pulse" />
+              <span>{companionDisplayName} • Giơ tay sang Trái / Phải</span>
             </div>
           </div>
         )}
@@ -933,11 +1011,11 @@ export function ARGestureTracker({
           <div className="absolute inset-0 z-20 pointer-events-none">
             {/* Thanh hiển thị tiến độ bài tập và điểm số ở góc trên */}
             <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-30 pointer-events-auto">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-lowest/90 backdrop-blur-md border border-white/15 text-white shadow-lg text-[10px] sm:text-xs font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>MỤC TIÊU: <strong className="text-tertiary">{miniWaveIndex + 1}</strong> / 10</span>
-                <span className="text-white/40">•</span>
-                <span>ĐIỂM: <strong className="text-emerald-400">{miniScore}</strong></span>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#f59e0b] text-[#1b3a8a] shadow-md text-[10px] sm:text-xs font-extrabold">
+                <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
+                <span>MỤC TIÊU: <strong className="text-[#2563eb]">{miniWaveIndex + 1}</strong> / 10</span>
+                <span className="text-slate-400">•</span>
+                <span>ĐIỂM: <strong className="text-[#16a34a]">{miniScore}</strong></span>
               </div>
 
               {/* Nút bỏ qua mục tiêu nếu người dùng muốn chuyển mục tiêu khác */}
@@ -951,7 +1029,7 @@ export function ARGestureTracker({
                       resolveWave(false, miniTargets[miniWaveIndex], 'skip');
                     }
                   }}
-                  className="px-2.5 py-1 rounded-full bg-surface-container-high/90 hover:bg-surface-container-highest text-on-surface-variant hover:text-white text-[10px] font-semibold border border-white/10 shadow-md transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                  className="px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#1b3a8a] text-[10px] font-bold border-2 border-[#93c5fd] shadow-md transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                   title="Bỏ qua mục tiêu này nếu góc máy quét bị che khuất"
                 >
                   <span>Bỏ qua</span>
@@ -972,17 +1050,17 @@ export function ARGestureTracker({
                 {/* Vòng lan tỏa Radar */}
                 <div
                   className={`absolute inset-0 rounded-full border-2 ${
-                    miniTargets[miniWaveIndex].side === 'LEFT' ? 'border-secondary' : 'border-tertiary'
-                  } animate-ping opacity-50 pointer-events-none`}
+                    miniTargets[miniWaveIndex].side === 'LEFT' ? 'border-[#16a34a]' : 'border-[#2563eb]'
+                  } animate-ping opacity-60 pointer-events-none`}
                 />
 
-                {/* Vòng nạp tiến độ tương tác SVG 1.0 giây (Bắt đầu từ rỗng 238.76 và lấp đầy khi giữ tay 1s) */}
+                {/* Vòng nạp tiến độ tương tác SVG 1.0 giây */}
                 <svg className="w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 96 96">
                   <circle
                     cx="48"
                     cy="48"
                     r="38"
-                    className="stroke-white/15"
+                    className="stroke-white/40"
                     strokeWidth="5"
                     fill="none"
                   />
@@ -991,8 +1069,8 @@ export function ARGestureTracker({
                     cx="48"
                     cy="48"
                     r="38"
-                    className={miniTargets[miniWaveIndex].side === 'LEFT' ? 'stroke-secondary' : 'stroke-tertiary'}
-                    strokeWidth="5.5"
+                    className={miniTargets[miniWaveIndex].side === 'LEFT' ? 'stroke-[#16a34a]' : 'stroke-[#2563eb]'}
+                    strokeWidth="6"
                     fill="none"
                     strokeLinecap="round"
                     strokeDasharray="238.76"
@@ -1003,10 +1081,10 @@ export function ARGestureTracker({
                 {/* Nhân trung tâm của Mục tiêu */}
                 <div
                   ref={miniTargetCenterRef}
-                  className={`absolute inset-2 sm:inset-3 rounded-full backdrop-blur-md border-2 flex flex-col items-center justify-center transition-all duration-100 ${
+                  className={`mana-keep-white absolute inset-2 sm:inset-3 rounded-full border-3 border-white flex flex-col items-center justify-center transition-all duration-100 ${
                     miniTargets[miniWaveIndex].side === 'LEFT'
-                      ? 'bg-secondary-container/80 border-secondary text-secondary shadow-[0_0_24px_rgba(184,196,255,0.7)]'
-                      : 'bg-tertiary-container/80 border-tertiary text-tertiary shadow-[0_0_24px_rgba(23,219,229,0.7)]'
+                      ? 'bg-[#16a34a]/90 shadow-[0_4px_0_#0b5626]'
+                      : 'bg-[#2563eb]/90 shadow-[0_4px_0_#133478]'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[24px] sm:text-[28px] animate-bounce my-0.5 text-white">
@@ -1018,16 +1096,16 @@ export function ARGestureTracker({
                 </div>
 
                 {/* Nhãn hướng dẫn & tiến độ giữ tay 1s */}
-                <div className="absolute -top-7 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-surface-container-lowest/95 border border-white/20 text-white text-[9.5px] sm:text-[10.5px] font-bold shadow-lg flex items-center gap-1.5 pointer-events-none">
-                  <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse" />
-                  <span ref={miniTimerTextRef} className="font-mono text-tertiary font-black">
+                <div className="absolute -top-7 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-white border-2 border-[#f59e0b] text-[#1b3a8a] text-[9.5px] sm:text-[10.5px] font-bold shadow-md flex items-center gap-1.5 pointer-events-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-pulse" />
+                  <span ref={miniTimerTextRef} className="font-mono text-[#2563eb] font-black">
                     Giữ tay 1.0s
                   </span>
-                  <span className="text-white/80">• Đưa tay vào</span>
+                  <span className="text-slate-700">• Đưa tay vào</span>
                 </div>
 
                 {/* Tên vùng mục tiêu */}
-                <div className="absolute -bottom-5 whitespace-nowrap px-2 py-0.5 rounded-full bg-black/60 text-[8.5px] text-white/70 font-semibold pointer-events-none">
+                <div className="mana-keep-white absolute -bottom-5 whitespace-nowrap px-2.5 py-0.5 rounded-full bg-[#1b3a8a] border border-white text-[8.5px] text-white font-bold pointer-events-none shadow">
                   {miniTargets[miniWaveIndex].label}
                 </div>
               </div>
@@ -1040,10 +1118,10 @@ export function ARGestureTracker({
                   left: `${miniHitFeedback.x * 100}%`,
                   top: `${miniHitFeedback.y * 100}%`,
                 }}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 z-40 px-3.5 py-1.5 rounded-xl font-black text-xs sm:text-sm tracking-wide shadow-2xl flex items-center gap-1.5 pointer-events-none ppt-page-enter ${
+                className={`mana-keep-white absolute -translate-x-1/2 -translate-y-1/2 z-40 px-3.5 py-1.5 rounded-full font-black text-xs sm:text-sm tracking-wide flex items-center gap-1.5 pointer-events-none ppt-page-enter ${
                   miniHitFeedback.success
-                    ? 'bg-emerald-400 text-[#032117] border-2 border-white shadow-[0_0_35px_rgba(16,185,129,0.9)] scale-110'
-                    : 'bg-surface-container-highest text-on-surface border-2 border-white/30 shadow-[0_0_20px_rgba(0,0,0,0.5)]'
+                    ? 'btn-mana-green scale-110'
+                    : 'btn-mana-blue'
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">
@@ -1057,32 +1135,32 @@ export function ARGestureTracker({
 
         {/* MÀN HÌNH TỔNG KẾT KẾT QUẢ MINI GAME */}
         {mode === 'minigame' && miniIsFinished && (
-          <div className="absolute inset-0 z-40 bg-surface-container-lowest/95 backdrop-blur-2xl rounded-xl flex flex-col items-center justify-center p-4 sm:p-6 text-center gap-2.5 sm:gap-3 ppt-page-enter overflow-y-auto">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-tertiary/20 to-emerald-400/30 border border-tertiary/40 flex items-center justify-center shadow-[0_0_30px_rgba(23,219,229,0.4)]">
-              <span className="material-symbols-outlined text-tertiary text-[32px] sm:text-[40px]">
+          <div className="absolute inset-0 z-40 bg-white/95 backdrop-blur-xl rounded-xl flex flex-col items-center justify-center p-4 sm:p-6 text-center gap-2.5 sm:gap-3 ppt-page-enter overflow-y-auto">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#ebf9f1] border-2 border-[#16a34a] flex items-center justify-center shadow-md">
+              <span className="material-symbols-outlined text-[#16a34a] text-[32px] sm:text-[40px]">
                 emoji_events
               </span>
             </div>
 
             <div className="flex flex-col gap-1 max-w-md">
-              <span className="text-label-caps text-tertiary uppercase text-[10px] sm:text-[11px] font-bold">
+              <span className="text-label-caps text-[#2563eb] uppercase text-[10px] sm:text-[11px] font-black">
                 HOÀN THÀNH THỬ NGHIỆM AR
               </span>
-              <h3 className="text-lg sm:text-2xl font-black text-white uppercase">
+              <h3 className="text-lg sm:text-2xl font-black text-[#1b3a8a] uppercase">
                 {miniScore >= 8
                   ? 'PHẢN XẠ AR XUẤT SẮC!'
                   : miniScore >= 5
                   ? 'KẾT QUẢ RẤT TỐT!'
                   : 'ĐÃ HOÀN TẤT THỬ NGHIỆM!'}
               </h3>
-              <div className="inline-flex items-center justify-center gap-2 py-1 px-4 rounded-xl bg-surface-container-high border border-white/10 my-1 mx-auto">
-                <span className="text-xs text-on-surface-variant font-semibold">ĐIỂM ĐẠT:</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-emerald-400">
+              <div className="inline-flex items-center justify-center gap-2 py-1 px-4 rounded-full bg-[#eef6ff] border-2 border-[#93c5fd] my-1 mx-auto">
+                <span className="text-xs text-slate-600 font-bold">ĐIỂM ĐẠT:</span>
+                <span className="text-lg sm:text-xl font-mono font-black text-[#16a34a]">
                   {miniScore} / 10
                 </span>
-                <span className="text-xs font-bold text-tertiary">({miniScore * 10}%)</span>
+                <span className="text-xs font-black text-[#2563eb]">({miniScore * 10}%)</span>
               </div>
-              <p className="text-[11px] sm:text-xs text-on-surface-variant leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed font-medium">
                 {miniScore >= 8
                   ? 'Webcam nhận diện cử chỉ bàn tay của bạn cực kỳ nhạy bén. Bạn đã sẵn sàng bước vào trận đấu Kéo co AI!'
                   : miniScore >= 5
@@ -1091,14 +1169,14 @@ export function ARGestureTracker({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 flex-wrap justify-center">
+            <div className="flex items-center gap-2.5 pt-2 flex-wrap justify-center">
               <button
                 type="button"
                 onClick={() => {
                   audio.playClick();
                   restartMiniGame();
                 }}
-                className="px-4 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-bold border border-white/10 transition-colors cursor-pointer flex items-center gap-1.5"
+                className="btn-mana-blue px-4 py-2 rounded-full text-xs font-black cursor-pointer flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
                 <span>Luyện tập lại</span>
@@ -1111,7 +1189,7 @@ export function ARGestureTracker({
                     audio.playClick();
                     onStartGame();
                   }}
-                  className="px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] font-black text-xs uppercase tracking-wider shadow-[0_6px_20px_rgba(23,219,229,0.4)] hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="btn-mana-orange px-5 sm:px-6 py-2.5 rounded-full font-black text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>VÀO CHƠI KÉO CO (BƯỚC 03)</span>
                   <span className="material-symbols-outlined text-[18px]">play_arrow</span>
@@ -1122,39 +1200,38 @@ export function ARGestureTracker({
         )}
 
         {/* =================================================================
-         * CHẾ ĐỘ 2: LỚP PHỦ QUIZ 2 VÙNG TRÁI / PHẢI (CHO BƯỚC 03 - KÉO CO)
+         * CHẾ ĐỘ 2: LỚP PHỦ QUIZ 2 VÙNG TRÁI / PHẢI TRONG SUỐT TRÊN CAMERA TRỰC TIẾP
          * ================================================================= */}
         {mode === 'quiz' && (
-          <div className="absolute inset-0 z-20 grid grid-cols-12 gap-1.5 sm:gap-2 p-1.5 sm:p-2.5">
-            {/* VÙNG AR 1: KHÔNG CÓ AI (TRÁI) */}
+          <div className="absolute inset-0 z-20 grid grid-cols-12 gap-1.5 sm:gap-2 p-1.5 sm:p-2">
+            {/* VÙNG AR 1: KHÔNG CÓ AI (TRÁI - TÔNG XANH LÁ MANA) */}
             <div
               onClick={() => !locked && onSelectRef.current && onSelectRef.current('LEFT', 'hand')}
               className={`col-span-5 rounded-xl border-2 p-2 sm:p-2.5 flex flex-col justify-between transition-all relative overflow-hidden cursor-pointer ${
                 selectedSide === 'LEFT'
                   ? !hasAI
-                    ? 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_30px_rgba(16,185,129,0.6)]'
-                    : 'border-error bg-error-container/70 shadow-[0_0_25px_rgba(255,180,171,0.5)]'
+                    ? 'border-[#22c55e] bg-[#16a34a]/55 shadow-[0_0_24px_rgba(22,163,74,0.7)]'
+                    : 'border-red-400 bg-red-600/55 shadow-[0_0_24px_rgba(220,38,38,0.6)]'
                   : detectedSide === 'LEFT'
-                  ? 'border-secondary bg-secondary-container/30 shadow-[0_0_28px_rgba(182,196,255,0.6)] scale-[1.01]'
-                  : isCameraHidden
-                  ? 'border-white/15 bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-sm'
-                  : 'border-white/20 bg-surface-container-lowest/60 hover:bg-surface-container-lowest/75'
+                  ? 'border-[#22c55e] bg-[#16a34a]/35 shadow-[0_0_24px_rgba(22,163,74,0.65)] scale-[1.01]'
+                  : 'border-white/70 bg-emerald-950/15 hover:bg-emerald-900/25'
               }`}
             >
               <div
                 ref={leftBarRef}
-                className="absolute bottom-0 left-0 h-1.5 sm:h-2 bg-secondary"
+                className="absolute bottom-0 left-0 h-2 bg-[#22c55e]"
                 style={{ width: '0%' }}
               />
 
               <div className="flex items-center justify-between gap-1">
-                <div className="text-xs sm:text-sm md:text-base text-white font-black drop-shadow tracking-wide">
-                  KHÔNG CÓ AI
+                <div className="mana-keep-white inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#16a34a] border-2 border-white text-[10px] sm:text-xs md:text-sm text-white font-black shadow-md tracking-wide">
+                  <span>👈</span>
+                  <span>KHÔNG CÓ AI</span>
                 </div>
                 {selectedSide === 'LEFT' && (
                   <span
-                    className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-label-kicker font-black ${
-                      !hasAI ? 'bg-emerald-400 text-[#032117]' : 'bg-error text-on-error'
+                    className={`mana-keep-white px-2 py-0.5 rounded-full text-[9px] sm:text-label-kicker font-black border border-white shadow ${
+                      !hasAI ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'
                     }`}
                   >
                     {!hasAI ? '✓ ĐÚNG' : '✕ SAI'}
@@ -1164,56 +1241,50 @@ export function ARGestureTracker({
 
               <div
                 ref={leftTextRef}
-                className="text-[9px] sm:text-label-kicker text-on-surface-variant uppercase truncate font-bold"
+                className="mana-keep-white self-start px-2 py-0.5 rounded-full bg-black/55 backdrop-blur-xs text-[9px] sm:text-[10px] text-white uppercase truncate font-bold border border-white/25"
               >
                 👈 Đưa tay sang Trái (Giữ 1s)
               </div>
             </div>
 
-            {/* VÙNG TRUNG TÂM: TIẾN ĐỘ VÀ MANA */}
-            <div className="col-span-2 flex flex-col items-center justify-between py-1 pointer-events-none">
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container-lowest/85 border border-white/15 text-[8px] sm:text-[9.5px] font-mono font-bold text-tertiary uppercase truncate max-w-[90px]">
-                {isCameraHidden ? `${companionDisplayName.toUpperCase()} AR` : 'AR CAM'}
+            {/* VÙNG TRUNG TÂM: TIẾN ĐỘ VÀ VỊ TRÍ CHUẨN (GIỮ TRONG SUỐT ĐỂ THẤY RÕ NGƯỜI CHƠI) */}
+            <div className="col-span-2 flex flex-col items-center justify-between py-0.5 pointer-events-none">
+              <span className="px-2 py-0.5 rounded-full mana-camera-pill text-[8px] sm:text-[9px] font-black uppercase truncate max-w-[100px]">
+                LIVE CAM
               </span>
 
               <div
                 ref={centerBadgeRef}
-                className="px-2 py-0.5 rounded-lg bg-surface-container-lowest/95 border border-tertiary text-tertiary text-[10px] sm:text-xs font-mono uppercase shadow-lg text-center font-bold"
+                className="px-2 py-0.5 rounded-full bg-white/95 border-2 border-[#2563eb] text-[#1b3a8a] text-[9.5px] sm:text-[11px] font-mono uppercase shadow-md text-center font-black"
               >
                 Ở GIỮA
               </div>
-
-              <span className="text-[8px] sm:text-[9.5px] font-bold text-white/75 uppercase text-center hidden sm:block">
-                Vị trí chuẩn
-              </span>
             </div>
 
-            {/* VÙNG AR 2: CÓ SỬ DỤNG AI (PHẢI) */}
+            {/* VÙNG AR 2: CÓ SỬ DỤNG AI (PHẢI - TÔNG XANH DƯƠNG ROYAL) */}
             <div
               onClick={() => !locked && onSelectRef.current && onSelectRef.current('RIGHT', 'hand')}
               className={`col-span-5 rounded-xl border-2 p-2 sm:p-2.5 flex flex-col justify-between items-end text-right transition-all relative overflow-hidden cursor-pointer ${
                 selectedSide === 'RIGHT'
                   ? hasAI
-                    ? 'border-emerald-400 bg-emerald-950/80 shadow-[0_0_30px_rgba(16,185,129,0.6)]'
-                    : 'border-error bg-error-container/70 shadow-[0_0_25px_rgba(255,180,171,0.5)]'
+                    ? 'border-[#22c55e] bg-[#16a34a]/55 shadow-[0_0_24px_rgba(22,163,74,0.7)]'
+                    : 'border-red-400 bg-red-600/55 shadow-[0_0_24px_rgba(220,38,38,0.6)]'
                   : detectedSide === 'RIGHT'
-                  ? 'border-tertiary bg-tertiary-container/30 shadow-[0_0_28px_rgba(23,219,229,0.6)] scale-[1.01]'
-                  : isCameraHidden
-                  ? 'border-white/15 bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-sm'
-                  : 'border-white/20 bg-surface-container-lowest/60 hover:bg-surface-container-lowest/75'
+                  ? 'border-[#3b82f6] bg-[#2563eb]/35 shadow-[0_0_24px_rgba(37,99,235,0.65)] scale-[1.01]'
+                  : 'border-white/70 bg-blue-950/15 hover:bg-blue-900/25'
               }`}
             >
               <div
                 ref={rightBarRef}
-                className="absolute bottom-0 right-0 h-1.5 sm:h-2 bg-tertiary"
+                className="absolute bottom-0 right-0 h-2 bg-[#3b82f6]"
                 style={{ width: '0%' }}
               />
 
               <div className="flex items-center justify-between gap-1 w-full">
                 {selectedSide === 'RIGHT' ? (
                   <span
-                    className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-label-kicker font-black ${
-                      hasAI ? 'bg-emerald-400 text-[#032117]' : 'bg-error text-on-error'
+                    className={`mana-keep-white px-2 py-0.5 rounded-full text-[9px] sm:text-label-kicker font-black border border-white shadow ${
+                      hasAI ? 'bg-[#16a34a] text-white' : 'bg-[#dc2626] text-white'
                     }`}
                   >
                     {hasAI ? '✓ ĐÚNG' : '✕ SAI'}
@@ -1221,14 +1292,15 @@ export function ARGestureTracker({
                 ) : (
                   <span />
                 )}
-                <div className="text-xs sm:text-sm md:text-base text-white font-black drop-shadow tracking-wide">
-                  CÓ SỬ DỤNG AI
+                <div className="mana-keep-white inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#2563eb] border-2 border-white text-[10px] sm:text-xs md:text-sm text-white font-black shadow-md tracking-wide">
+                  <span>CÓ SỬ DỤNG AI</span>
+                  <span>👉</span>
                 </div>
               </div>
 
               <div
                 ref={rightTextRef}
-                className="text-[9px] sm:text-label-kicker text-on-surface-variant uppercase truncate font-bold"
+                className="mana-keep-white self-end px-2 py-0.5 rounded-full bg-black/55 backdrop-blur-xs text-[9px] sm:text-[10px] text-white uppercase truncate font-bold border border-white/25"
               >
                 Đưa tay sang Phải (Giữ 1s) 👉
               </div>
@@ -1240,19 +1312,19 @@ export function ARGestureTracker({
         <div
           ref={noSubjectWarningRef}
           style={{ opacity: 0, pointerEvents: 'none' }}
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-35 max-w-[94%] px-3 py-1.5 rounded-xl bg-[#090e1c]/95 backdrop-blur-md border border-amber-400/50 shadow-[0_4px_24px_rgba(245,158,11,0.4)] flex items-center gap-2 text-[10px] sm:text-[11px] text-amber-200 transition-opacity duration-300"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-35 max-w-[94%] px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border-2 border-[#f59e0b] shadow-lg flex items-center gap-2 text-[10px] sm:text-[11px] text-[#3d2000] font-bold transition-opacity duration-300"
         >
-          <span className="material-symbols-outlined text-amber-400 text-[16px] shrink-0 animate-bounce">
+          <span className="material-symbols-outlined text-[#d97706] text-[16px] shrink-0 animate-bounce">
             front_hand
           </span>
           <span className="leading-snug truncate">
-            Chưa thấy bàn tay • Hãy giơ tay ngang ngực trước camera hoặc dùng <strong>Chuột / Phím A, D</strong>
+            Hãy <strong>xòe bàn tay ✋</strong> trước camera để kéo co (hoặc dùng <strong>Chuột / Phím A, D</strong>)
           </span>
           {onFallbackToMouse && (
             <button
               type="button"
               onClick={onFallbackToMouse}
-              className="ml-1 px-2.5 py-0.5 rounded-md bg-amber-400/25 hover:bg-amber-400/40 text-amber-300 font-bold text-[9.5px] border border-amber-400/40 whitespace-nowrap transition-colors cursor-pointer"
+              className="btn-mana-orange ml-1 px-2.5 py-0.5 rounded-full font-black text-[9.5px] whitespace-nowrap cursor-pointer"
             >
               Dùng chuột
             </button>

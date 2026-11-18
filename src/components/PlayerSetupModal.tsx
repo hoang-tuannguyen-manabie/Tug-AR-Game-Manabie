@@ -45,7 +45,7 @@ export function CharacterAvatar({
     <div className={`relative overflow-hidden flex items-center justify-center select-none ${className}`}>
       {!loaded && !useSpriteFallback && (
         <div
-          className="absolute inset-0 bg-gradient-to-br from-[#2a1b5e] via-[#3b267e] to-[#1e1246] animate-pulse rounded-xl"
+          className="absolute inset-0 bg-gradient-to-br from-[#dbeafe] via-[#eff6ff] to-[#dcfce7] animate-pulse rounded-xl"
           aria-hidden="true"
         />
       )}
@@ -84,7 +84,6 @@ export function PlayerSetupModal({
   initialProfile,
   initialStep = 'name',
   onConfirm,
-  onClose,
 }: PlayerSetupModalProps) {
   const [step, setStep] = useState<SetupStep>(initialStep);
   const [rawName, setRawName] = useState<string>(initialProfile?.playerName ?? '');
@@ -218,22 +217,23 @@ export function PlayerSetupModal({
 
   return (
     <div
-      className="fixed inset-0 z-[75] flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-[#0d0628]/90 backdrop-blur-xl overflow-y-auto"
+      className="fixed inset-0 z-[75] flex items-center justify-center p-2 sm:p-3 md:p-4 bg-[#1b3a8a]/40 backdrop-blur-md overflow-hidden select-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="player-setup-title"
     >
-      {/* Hiệu ứng nền Tím Vũ Trụ & Hạt sáng giáo dục hiện đại */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-28 -left-28 w-96 h-96 rounded-full bg-[#6d28d9]/30 blur-3xl" />
-        <div className="absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-[#10b981]/20 blur-3xl" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-[#8b5cf6]/15 blur-3xl" />
+      {/* Nền chia đôi Pastel Xanh Mint / Xanh Sky kiểu Mana Oẳn Tù Xì */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-75" aria-hidden="true">
+        <div className="absolute inset-y-0 left-0 w-1/2 bg-[#ebf9f1]/80" />
+        <div className="absolute inset-y-0 right-0 w-1/2 bg-[#eaf2ff]/80" />
+        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-[#d3f2df]" />
+        <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-[#d6e6ff]" />
       </div>
 
-      <div className="relative w-full max-w-4xl rounded-3xl bg-gradient-to-br from-[#231454]/95 via-[#1a0f40]/95 to-[#12092e]/95 border-2 border-[#8b5cf6]/40 shadow-[0_24px_80px_rgba(0,0,0,0.75),0_0_50px_rgba(139,92,246,0.25)] p-4 sm:p-6 md:p-7 flex flex-col gap-3 sm:gap-4 max-h-[94vh] overflow-y-auto ppt-page-enter">
-        {/* Thanh tiến trình 3 bước */}
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-wrap">
+      <div className="relative w-full max-w-3xl md:max-w-4xl h-auto max-h-[96dvh] sm:max-h-[92dvh] rounded-2xl sm:rounded-3xl bg-white border-3 sm:border-4 border-[#2563eb] shadow-[0_8px_0_#133478,0_24px_60px_rgba(27,58,138,0.25)] overflow-hidden flex flex-col ppt-page-enter">
+        {/* Thanh Header Royal Navy chuẩn Mana Oẳn Tù Xì */}
+        <div className="mana-header-royal px-3 sm:px-5 py-2 sm:py-2.5 landscape:py-1.5 flex items-center justify-between gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {/* Bước 1 */}
             <button
               type="button"
@@ -241,10 +241,10 @@ export function PlayerSetupModal({
                 audio.playClick();
                 setStep('name');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
                 step === 'name'
-                  ? 'bg-emerald-400 text-[#052e16] shadow-[0_0_16px_rgba(52,211,153,0.45)]'
-                  : 'bg-[#2e1a68] text-purple-200 hover:bg-[#3b2282]'
+                  ? 'btn-mana-orange'
+                  : 'bg-white/15 text-white hover:bg-white/25 border border-white/30'
               }`}
             >
               <span className="w-4 h-4 rounded-full bg-black/20 flex items-center justify-center text-[10px] font-black">
@@ -253,7 +253,7 @@ export function PlayerSetupModal({
               <span>Nhập tên</span>
             </button>
 
-            <span className="text-purple-400/60 text-xs font-bold">›</span>
+            <span className="text-white/60 text-xs font-black">›</span>
 
             {/* Bước 2 */}
             <button
@@ -269,10 +269,10 @@ export function PlayerSetupModal({
                 setRawName(res.cleaned);
                 setStep('character');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
                 step === 'character'
-                  ? 'bg-emerald-400 text-[#052e16] shadow-[0_0_16px_rgba(52,211,153,0.45)]'
-                  : 'bg-[#2e1a68] text-purple-200 hover:bg-[#3b2282]'
+                  ? 'btn-mana-orange'
+                  : 'bg-white/15 text-white hover:bg-white/25 border border-white/30'
               }`}
             >
               <span className="w-4 h-4 rounded-full bg-black/20 flex items-center justify-center text-[10px] font-black">
@@ -281,7 +281,7 @@ export function PlayerSetupModal({
               <span>Chọn nhân vật (36)</span>
             </button>
 
-            <span className="text-purple-400/60 text-xs font-bold">›</span>
+            <span className="text-white/60 text-xs font-black">›</span>
 
             {/* Bước 3 */}
             <button
@@ -297,10 +297,10 @@ export function PlayerSetupModal({
                 setRawName(res.cleaned);
                 setStep('confirm');
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10.5px] sm:text-xs font-black transition-all cursor-pointer ${
                 step === 'confirm'
-                  ? 'bg-emerald-400 text-[#052e16] shadow-[0_0_16px_rgba(52,211,153,0.45)]'
-                  : 'bg-[#2e1a68] text-purple-200 hover:bg-[#3b2282]'
+                  ? 'btn-mana-orange'
+                  : 'bg-white/15 text-white hover:bg-white/25 border border-white/30'
               }`}
             >
               <span className="w-4 h-4 rounded-full bg-black/20 flex items-center justify-center text-[10px] font-black">
@@ -309,321 +309,319 @@ export function PlayerSetupModal({
               <span>Xác nhận</span>
             </button>
           </div>
+
+          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[10px] font-extrabold uppercase tracking-wider">
+            <span>🎮</span>
+            <span>Đấu Trường Kéo Co AI</span>
+          </span>
         </div>
 
-        {/* =================================================================
-         * BƯỚC 1: NHẬP TÊN NGƯỜI CHƠI
-         * ================================================================= */}
-        {step === 'name' && (
-          <form
-            onSubmit={handleProceedToCharacter}
-            className="flex flex-col items-center justify-center text-center gap-4 py-3 sm:py-5 px-2 max-w-lg mx-auto w-full ppt-page-enter"
-            noValidate
-          >
-            {/* Avatar xem trước sinh động */}
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-[#2b1766] border-2 border-purple-400/50 p-2 shadow-[0_12px_32px_rgba(139,92,246,0.4)] flex items-center justify-center">
-              <CharacterAvatar
-                character={selectedCharacter}
-                className="w-full h-full rounded-2xl"
-                imgClassName="w-full h-full object-contain"
-              />
-              <span className="absolute -bottom-2 px-2.5 py-0.5 rounded-full bg-emerald-400 text-[#052e16] text-[10px] font-black uppercase tracking-wider shadow">
-                36 Nhân Vật
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-1.5 mt-1">
-              <h2
-                id="player-setup-title"
-                className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight"
-              >
-                Sẵn sàng tham gia thử thách?
-              </h2>
-              <p className="text-xs sm:text-sm text-purple-200/90 font-medium">
-                Nhập tên và chọn nhân vật đồng hành của bạn.
-              </p>
-            </div>
-
-            <div className="w-full flex flex-col gap-2 text-left mt-1">
-              <div className="flex items-center justify-between px-1">
-                <label
-                  htmlFor="player-name-input"
-                  className="text-xs font-bold uppercase tracking-wider text-purple-200"
-                >
-                  Tên người chơi <span className="text-emerald-400">*</span>
-                </label>
-                <span
-                  className={`text-xs font-mono font-bold ${
-                    rawName.trim().length >= 18 ? 'text-amber-300' : 'text-purple-300/80'
-                  }`}
-                >
-                  {rawName.trim().length}/20 ký tự
+        {/* Nội dung chính bên trong Modal */}
+        <div className="p-3 sm:p-5 landscape:p-2 flex flex-col flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-[#f8fbff] to-white justify-between">
+          {/* =================================================================
+           * BƯỚC 1: NHẬP TÊN NGƯỜI CHƠI
+           * ================================================================= */}
+          {step === 'name' && (
+            <form
+              onSubmit={handleProceedToCharacter}
+              className="flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3.5 landscape:gap-1.5 py-1 sm:py-2 px-2 max-w-md mx-auto w-full flex-1 my-auto ppt-page-enter"
+              noValidate
+            >
+              {/* Avatar xem trước trên nền Pastel Mint */}
+              <div className="relative w-16 h-16 sm:w-22 sm:h-22 md:w-24 md:h-24 landscape:w-12 landscape:h-12 rounded-2xl sm:rounded-3xl bg-[#ebf9f1] border-3 sm:border-4 border-[#16a34a] p-1 sm:p-1.5 shadow-[0_4px_0_#0b5626] flex items-center justify-center shrink-0">
+                <CharacterAvatar
+                  character={selectedCharacter}
+                  className="w-full h-full rounded-xl sm:rounded-2xl"
+                  imgClassName="w-full h-full object-contain"
+                />
+                <span className="mana-keep-white absolute -bottom-2 px-2.5 py-0.5 rounded-full bg-[#16a34a] border-2 border-white text-white text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider shadow">
+                  36 Nhân Vật
                 </span>
               </div>
 
-              <div className="relative">
-                <input
-                  ref={nameInputRef}
-                  id="player-name-input"
-                  type="text"
-                  inputMode="text"
-                  enterKeyHint="next"
-                  autoComplete="nickname"
-                  maxLength={20}
-                  value={rawName}
-                  onChange={handleNameChange}
-                  placeholder="Tên của bạn là gì?"
-                  aria-invalid={Boolean(errorMsg)}
-                  aria-describedby={errorMsg ? 'player-name-error' : undefined}
-                  className={`w-full px-4 py-3.5 rounded-2xl bg-[#140a30] border-2 text-base sm:text-lg font-bold text-white placeholder:text-purple-300/45 focus:outline-none transition-all shadow-inner ${
-                    errorMsg
-                      ? 'border-rose-400 focus:border-rose-400 shadow-[0_0_20px_rgba(251,113,133,0.25)]'
-                      : 'border-purple-400/40 focus:border-emerald-400 focus:shadow-[0_0_24px_rgba(52,211,153,0.3)]'
-                  }`}
-                />
-                {rawName.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRawName('');
-                      setErrorMsg(null);
-                      nameInputRef.current?.focus();
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-purple-200 flex items-center justify-center cursor-pointer"
-                    title="Xóa tên đang nhập"
-                    aria-label="Xóa tên đang nhập"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                  </button>
-                )}
-              </div>
-
-              {errorMsg && (
-                <div
-                  id="player-name-error"
-                  role="alert"
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-500/20 border border-rose-400/50 text-rose-200 text-xs sm:text-sm font-semibold"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-rose-300 shrink-0">
-                    error
-                  </span>
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="mt-2 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-400 via-[#2dd4bf] to-emerald-300 text-[#042f2e] font-black text-sm sm:text-base uppercase tracking-wider shadow-[0_8px_25px_rgba(52,211,153,0.4)] hover:brightness-110 hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-emerald-400/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Tiếp tục chọn nhân vật</span>
-              <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-            </button>
-          </form>
-        )}
-
-        {/* =================================================================
-         * BƯỚC 2: CHỌN NHÂN VẬT ĐỒNG HÀNH (36 NHÂN VẬT TỪ SPRITE SHEET)
-         * ================================================================= */}
-        {step === 'character' && (
-          <div className="flex flex-col gap-3 flex-1 min-h-0 ppt-page-enter">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-              <div>
+              <div className="flex flex-col gap-0.5 mt-1">
                 <h2
                   id="player-setup-title"
-                  className="text-lg sm:text-2xl font-black text-white tracking-tight"
+                  className="text-base sm:text-xl md:text-2xl landscape:text-sm font-black text-[#1b3a8a] tracking-tight"
                 >
-                  Chọn nhân vật đồng hành
+                  Sẵn sàng tham gia thử thách?
                 </h2>
-                <p className="text-xs sm:text-sm text-purple-200/85">
-                  Xin chào <strong className="text-emerald-300">{rawName.trim()}</strong>! Hãy chọn 1 trong 36 người bạn đồng hành bên dưới:
+                <p className="text-[11px] sm:text-xs md:text-sm landscape:text-[10px] text-slate-600 font-semibold">
+                  Nhập tên và chọn nhân vật đồng hành trong Đấu trường Kéo co AI.
                 </p>
               </div>
 
-              {/* Thông tin nhân vật đang chọn hiện tại */}
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-[#2a1760]/90 border border-emerald-400/40 shrink-0 self-start sm:self-center shadow-md">
-                <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#1a0e40] border border-white/15 shrink-0">
-                  <CharacterAvatar character={selectedCharacter} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-emerald-300 tracking-wider">
-                    Đang chọn:
-                  </span>
-                  <span className="text-xs sm:text-sm font-black text-white leading-tight">
-                    {selectedCharacter.name}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Lưới 36 nhân vật có thanh cuộn mượt, responsive 2-3 cột trên mobile và 6 cột trên desktop */}
-            <div
-              role="radiogroup"
-              aria-label="Danh sách 36 nhân vật đồng hành"
-              className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 sm:gap-3 overflow-y-auto pr-1 py-1 max-h-[48vh] sm:max-h-[52vh]"
-            >
-              {PLAYER_CHARACTERS.map((char, idx) => {
-                const isSelected = char.id === selectedCharId;
-                return (
-                  <button
-                    key={char.id}
-                    id={`char-option-${char.id}`}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    aria-label={char.name}
-                    onClick={() => handleSelectCharacter(char)}
-                    onKeyDown={(e) => handleGridKeyDown(e, idx)}
-                    className={`group relative rounded-2xl p-2 flex flex-col items-center gap-1.5 transition-all duration-200 cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                      isSelected
-                        ? 'bg-gradient-to-b from-[#3b2185] to-[#251358] border-2 border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.55)] scale-[1.03] z-10'
-                        : 'bg-[#1a0f3e]/90 hover:bg-[#28175c] border-2 border-purple-400/20 hover:border-purple-300/50 hover:scale-[1.04]'
+              <div className="w-full flex flex-col gap-1 text-left">
+                <div className="flex items-center justify-between px-1">
+                  <label
+                    htmlFor="player-name-input"
+                    className="text-[10.5px] sm:text-xs font-extrabold uppercase tracking-wider text-[#1b3a8a]"
+                  >
+                    Tên người chơi <span className="text-[#f47920]">*</span>
+                  </label>
+                  <span
+                    className={`text-[10.5px] sm:text-xs font-mono font-bold ${
+                      rawName.trim().length >= 18 ? 'text-[#d97706]' : 'text-slate-500'
                     }`}
                   >
-                    {/* Dấu kiểm nổi bật khi được chọn */}
-                    {isSelected && (
-                      <span
-                        className="absolute top-1.5 right-1.5 z-20 w-6 h-6 rounded-full bg-emerald-400 text-[#052e16] flex items-center justify-center shadow-[0_2px_10px_rgba(52,211,153,0.8)]"
-                        aria-hidden="true"
-                      >
-                        <span className="material-symbols-outlined text-[16px] font-black">
-                          check
-                        </span>
-                      </span>
-                    )}
+                    {rawName.trim().length}/20 ký tự
+                  </span>
+                </div>
 
-                    {/* Khung hiển thị nhân vật sắc nét, giữ nguyên tỷ lệ */}
-                    <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#1e1148] flex items-center justify-center p-0.5">
-                      <CharacterAvatar
-                        character={char}
-                        className="w-full h-full rounded-lg"
-                        imgClassName="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                      />
-                    </div>
-
-                    {/* Tên nhân vật */}
-                    <span
-                      className={`text-[10.5px] sm:text-[11px] font-bold text-center leading-tight line-clamp-1 w-full px-0.5 ${
-                        isSelected ? 'text-emerald-300 font-black' : 'text-purple-100/90 group-hover:text-white'
-                      }`}
+                <div className="relative">
+                  <input
+                    ref={nameInputRef}
+                    id="player-name-input"
+                    type="text"
+                    inputMode="text"
+                    enterKeyHint="next"
+                    autoComplete="nickname"
+                    maxLength={20}
+                    value={rawName}
+                    onChange={handleNameChange}
+                    placeholder="Tên của bạn là gì?"
+                    aria-invalid={Boolean(errorMsg)}
+                    aria-describedby={errorMsg ? 'player-name-error' : undefined}
+                    className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#f0f7ff] border-3 text-sm sm:text-base font-extrabold text-[#1b3a8a] placeholder:text-slate-400 focus:outline-none focus:bg-white transition-all ${
+                      errorMsg
+                        ? 'border-red-500 focus:border-red-600 shadow-[0_3px_0_#b91c1c]'
+                        : 'border-[#93c5fd] focus:border-[#2563eb] shadow-[0_3px_0_#cbd5e1] focus:shadow-[0_3px_0_#1d4ed8]'
+                    }`}
+                  />
+                  {rawName.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRawName('');
+                        setErrorMsg(null);
+                        nameInputRef.current?.focus();
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center cursor-pointer"
+                      title="Xóa tên đang nhập"
+                      aria-label="Xóa tên đang nhập"
                     >
-                      {char.name}
+                      <span className="material-symbols-outlined text-[15px]">close</span>
+                    </button>
+                  )}
+                </div>
+
+                {errorMsg && (
+                  <div
+                    id="player-name-error"
+                    role="alert"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 border border-red-300 text-red-700 text-[11px] sm:text-xs font-bold"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-red-600 shrink-0">
+                      error
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Thanh điều hướng Bước 2 */}
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setStep('name');
-                }}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-purple-100 font-bold text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                <span>Sửa lại tên</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setStep('confirm');
-                }}
-                className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-emerald-400 via-[#2dd4bf] to-emerald-300 text-[#042f2e] font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_6px_20px_rgba(52,211,153,0.4)] hover:brightness-110 active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-emerald-400/50 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Xác nhận nhân vật</span>
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* =================================================================
-         * BƯỚC 3: XÁC NHẬN VÀ VÀO GAME
-         * ================================================================= */}
-        {step === 'confirm' && (
-          <div className="flex flex-col items-center justify-center text-center gap-3 py-2 sm:py-3 px-2 max-w-md mx-auto w-full ppt-page-enter">
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[16px]">verified</span>
-              <span>Hồ sơ chiến binh đã sẵn sàng</span>
-            </div>
-
-            {/* Thẻ Hồ sơ Người chơi & Nhân vật đồng hành */}
-            <div className="w-full rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#2d196b] to-[#1c0f45] border-2 border-emerald-400/60 p-3.5 sm:p-4 shadow-[0_0_30px_rgba(52,211,153,0.25)] flex flex-col items-center gap-2 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-emerald-400/15 blur-2xl pointer-events-none" />
-
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#1a0e40] border-2 border-emerald-400 p-1 shadow-[0_8px_20px_rgba(52,211,153,0.35)]">
-                <CharacterAvatar
-                  character={selectedCharacter}
-                  className="w-full h-full rounded-xl"
-                  imgClassName="w-full h-full object-contain"
-                />
-                <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-emerald-400 text-[#052e16] flex items-center justify-center shadow-md">
-                  <span className="material-symbols-outlined text-[15px] font-black">check</span>
-                </span>
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                <span className="text-[11px] uppercase font-bold tracking-widest text-purple-200/80">
-                  Người chơi
-                </span>
-                <h3
-                  id="player-setup-title"
-                  className="text-xl sm:text-2xl font-black text-white tracking-wide"
-                >
-                  {rawName.trim()}
-                </h3>
-                <div className="inline-flex items-center justify-center gap-1.5 mt-0.5 px-3 py-0.5 rounded-full bg-purple-900/70 border border-purple-400/30 text-emerald-300 text-xs font-bold">
-                  <span>Đồng hành cùng:</span>
-                  <strong className="text-white">{selectedCharacter.name}</strong>
+              <button
+                type="submit"
+                className="btn-mana-orange w-full py-2.5 sm:py-3.5 px-5 rounded-full font-black text-xs sm:text-base landscape:text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer mt-1"
+              >
+                <span>Tiếp tục chọn nhân vật</span>
+                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">arrow_forward</span>
+              </button>
+            </form>
+          )}
+
+          {/* =================================================================
+           * BƯỚC 2: CHỌN NHÂN VẬT ĐỒNG HÀNH (36 NHÂN VẬT TỪ SPRITE SHEET)
+           * ================================================================= */}
+          {step === 'character' && (
+            <div className="flex flex-col gap-2 sm:gap-2.5 landscape:gap-1 flex-1 min-h-0 ppt-page-enter">
+              <div className="flex items-center justify-between gap-2 shrink-0">
+                <div className="min-w-0">
+                  <h2
+                    id="player-setup-title"
+                    className="text-base sm:text-xl landscape:text-sm font-black text-[#1b3a8a] tracking-tight truncate"
+                  >
+                    Chọn bạn đồng hành
+                  </h2>
+                  <p className="text-[11px] sm:text-xs landscape:text-[10px] text-slate-600 font-medium truncate">
+                    Xin chào <strong className="text-[#16a34a] font-extrabold">{rawName.trim()}</strong>! Chọn 1 trong 36 nhân vật:
+                  </p>
+                </div>
+
+                {/* Thông tin nhân vật đang chọn hiện tại */}
+                <div className="flex items-center gap-2 px-2.5 py-1 landscape:py-0.5 rounded-xl bg-[#ebf9f1] border-2 border-[#16a34a] shrink-0 shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 landscape:w-6 landscape:h-6 rounded-lg overflow-hidden bg-white border border-[#86efac] shrink-0 p-0.5">
+                    <CharacterAvatar character={selectedCharacter} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] landscape:text-[8px] uppercase font-extrabold text-[#15803d] tracking-wider leading-none">
+                      Đang chọn:
+                    </span>
+                    <span className="text-xs sm:text-sm landscape:text-[10.5px] font-black text-[#1b3a8a] leading-tight truncate max-w-[100px] sm:max-w-[140px]">
+                      {selectedCharacter.name}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Bố cục nút: Nút Bắt đầu chơi toàn chiều rộng trên 1 dòng, 2 nút đổi thông tin phụ bên dưới */}
-            <div className="flex flex-col gap-2 w-full mt-1">
-              <button
-                type="button"
-                onClick={handleConfirmStartGame}
-                className="w-full py-3 px-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-400 via-[#2dd4bf] to-emerald-300 text-[#042f2e] font-black text-sm sm:text-base uppercase tracking-wider shadow-[0_6px_24px_rgba(52,211,153,0.45)] hover:brightness-110 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-emerald-400/50 transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+              {/* Lưới 36 nhân vật - Bố trí gọn gàng, tự co giãn, không cuộn modal */}
+              <div
+                role="radiogroup"
+                aria-label="Danh sách 36 nhân vật đồng hành"
+                className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-1.5 sm:gap-2 landscape:gap-1 overflow-y-auto sm:overflow-hidden p-1 flex-1 min-h-0 items-center justify-items-center"
               >
-                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">sports_esports</span>
-                <span>Bắt đầu chơi</span>
-              </button>
+                {PLAYER_CHARACTERS.map((char, idx) => {
+                  const isSelected = char.id === selectedCharId;
+                  return (
+                    <button
+                      key={char.id}
+                      id={`char-option-${char.id}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={char.name}
+                      onClick={() => handleSelectCharacter(char)}
+                      onKeyDown={(e) => handleGridKeyDown(e, idx)}
+                      className={`group relative rounded-xl sm:rounded-2xl p-1 flex flex-col items-center justify-center transition-all duration-150 cursor-pointer select-none focus:outline-none aspect-square w-full max-w-[62px] ${
+                        isSelected
+                          ? 'bg-[#ebf9f1] border-2 sm:border-3 border-[#16a34a] shadow-[0_3px_0_#0b5626] scale-105 z-10'
+                          : 'bg-white hover:bg-[#eaf2ff] border border-[#bfdbfe] hover:border-[#3b82f6] shadow-2xs'
+                      }`}
+                      title={char.name}
+                    >
+                      {/* Dấu kiểm nổi bật khi được chọn */}
+                      {isSelected && (
+                        <span
+                          className="mana-keep-white absolute -top-1 -right-1 z-20 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#16a34a] border border-white text-white flex items-center justify-center shadow"
+                          aria-hidden="true"
+                        >
+                          <span className="material-symbols-outlined text-[10px] sm:text-[12px] font-black">
+                            check
+                          </span>
+                        </span>
+                      )}
 
-              <div className="grid grid-cols-2 gap-2 w-full">
+                      {/* Khung hiển thị nhân vật sắc nét */}
+                      <div className="w-full h-full rounded-lg sm:rounded-xl overflow-hidden flex items-center justify-center p-0.5">
+                        <CharacterAvatar
+                          character={char}
+                          className="w-full h-full"
+                          imgClassName="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Thanh điều hướng Bước 2 cố định ở đáy, không bao giờ bị trôi */}
+              <div className="flex items-center justify-between gap-3 pt-2 landscape:pt-1 border-t border-slate-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     audio.playClick();
                     setStep('name');
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-purple-100 font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap border border-white/10"
+                  className="btn-mana-blue px-3.5 sm:px-4 py-2 sm:py-2.5 landscape:py-1.5 rounded-full font-black text-xs sm:text-sm landscape:text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">edit</span>
-                  <span>Đổi tên</span>
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_back</span>
+                  <span>Sửa lại tên</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
                     audio.playClick();
-                    setStep('character');
+                    setStep('confirm');
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-purple-100 font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap border border-white/10"
+                  className="btn-mana-orange px-5 sm:px-8 py-2 sm:py-2.5 landscape:py-1.5 rounded-full font-black text-xs sm:text-sm landscape:text-xs uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                  <span>Đổi nhân vật</span>
+                  <span>Xác nhận nhân vật</span>
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px]">arrow_forward</span>
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* =================================================================
+           * BƯỚC 3: XÁC NHẬN VÀ VÀO GAME
+           * ================================================================= */}
+          {step === 'confirm' && (
+            <div className="flex flex-col items-center justify-center text-center gap-2.5 sm:gap-3 landscape:gap-1.5 py-1 sm:py-2 px-2 max-w-sm mx-auto w-full flex-1 my-auto ppt-page-enter">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#ebf9f1] border-2 border-[#16a34a] text-[#15803d] text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                <span className="material-symbols-outlined text-[15px]">verified</span>
+                <span>Hồ sơ chiến binh đã sẵn sàng</span>
+              </div>
+
+              {/* Thẻ Hồ sơ Người chơi & Nhân vật đồng hành */}
+              <div className="w-full rounded-2xl sm:rounded-3xl mana-split-arena p-3 sm:p-4 landscape:p-2 flex flex-col items-center gap-2 relative overflow-hidden">
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 landscape:w-12 landscape:h-12 rounded-2xl bg-white border-3 sm:border-4 border-[#16a34a] p-1 shadow-[0_4px_0_#0b5626]">
+                  <CharacterAvatar
+                    character={selectedCharacter}
+                    className="w-full h-full rounded-xl"
+                    imgClassName="w-full h-full object-contain"
+                  />
+                  <span className="mana-keep-white absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#16a34a] border-2 border-white text-white flex items-center justify-center shadow">
+                    <span className="material-symbols-outlined text-[13px] font-black">check</span>
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase font-extrabold tracking-widest text-slate-600">
+                    Người chơi
+                  </span>
+                  <h3
+                    id="player-setup-title"
+                    className="text-lg sm:text-xl font-black text-[#1b3a8a] tracking-wide"
+                  >
+                    {rawName.trim()}
+                  </h3>
+                  <div className="inline-flex items-center justify-center gap-1 mt-0.5 px-3 py-0.5 rounded-full bg-white border border-[#93c5fd] text-[#2563eb] text-[11px] sm:text-xs font-bold shadow-2xs">
+                    <span>Đồng hành:</span>
+                    <strong className="text-[#1b3a8a] font-black">{selectedCharacter.name}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nút Bắt đầu chơi 3D Cam nổi bật */}
+              <div className="flex flex-col gap-2 w-full mt-0.5">
+                <button
+                  type="button"
+                  onClick={handleConfirmStartGame}
+                  className="btn-mana-orange w-full py-2.5 sm:py-3 px-5 rounded-full font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-[18px] sm:text-[20px]">sports_esports</span>
+                  <span>Bắt đầu chơi</span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audio.playClick();
+                      setStep('name');
+                    }}
+                    className="btn-mana-blue py-2 px-3 rounded-full font-black text-xs flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">edit</span>
+                    <span>Đổi tên</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audio.playClick();
+                      setStep('character');
+                    }}
+                    className="btn-mana-green py-2 px-3 rounded-full font-black text-xs flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">swap_horiz</span>
+                    <span>Đổi nhân vật</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

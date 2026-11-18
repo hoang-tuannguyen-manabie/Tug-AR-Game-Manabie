@@ -1,6 +1,6 @@
-# AI Tug of War — Bồi dưỡng Giáo viên 12 Tiết AI Cốt lõi (Manabie)
+# Kéo co cùng AI — Bồi dưỡng Giáo viên 12 Tiết AI Cốt lõi (Manabie)
 
-Dự án trò chơi tương tác **AR Kéo co giữa Con người và AI** (`game-ar-keo-co-demo-manabie`), được phát triển dựa trên nền tảng công nghệ của `game-ar-gap-nhiem-vu-demo-manabie` và thiết kế giao diện 4 bước chuẩn 16:9 cho máy chiếu lớp học.
+Dự án trò chơi tương tác **Kéo co cùng AI** (`game-ar-keo-co-demo-manabie`), được phát triển dựa trên nền tảng công nghệ của `game-ar-gap-nhiem-vu-demo-manabie` và thiết kế giao diện 4 bước chuẩn 16:9 cho máy chiếu lớp học.
 
 ## Tính năng nổi bật
 

@@ -83,12 +83,26 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
   const [showQuestionsModal, setShowQuestionsModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Cập nhật tiêu đề trang trên tab trình duyệt
+  // Cập nhật tiêu đề trang trên tab trình duyệt và kích hoạt cuộn trang tự nhiên trên máy tính
   useEffect(() => {
     const prevTitle = document.title;
     document.title = 'Host Dashboard · Đấu Trường Kéo Co AI | Manabie';
+
+    // Mở khóa scroll trên html, body, #root cho máy tính
+    document.documentElement.classList.add('host-scroll-enabled');
+    document.body.classList.add('host-scroll-enabled');
+    const rootEl = document.getElementById('root');
+    if (rootEl) {
+      rootEl.classList.add('host-scroll-enabled');
+    }
+
     return () => {
       document.title = prevTitle;
+      document.documentElement.classList.remove('host-scroll-enabled');
+      document.body.classList.remove('host-scroll-enabled');
+      if (rootEl) {
+        rootEl.classList.remove('host-scroll-enabled');
+      }
     };
   }, []);
 
@@ -335,22 +349,17 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
   const pagedList = filteredList.slice(startIndex, endIndex);
 
   return (
-    <div className="min-h-screen bg-[#090d1a] text-on-surface flex flex-col selection:bg-primary selection:text-on-primary">
-      {/* Nền phong cách Cyber Manabie */}
-      <div className="fixed inset-0 pointer-events-none opacity-40 z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-tertiary/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-0 right-1/4 w-[700px] h-[700px] bg-primary/10 rounded-full blur-[160px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:24px_24px]" />
-      </div>
-
+    <div
+      id="host-dashboard-page"
+      className="min-h-screen w-full bg-[#f1f5f9] text-[#1e293b] flex flex-col font-sans pb-12 select-text"
+    >
       {/* HEADER QUẢN TRỊ TRUNG TÂM */}
-      <header className="relative z-20 w-full bg-surface-container-lowest/90 backdrop-blur-2xl border-b border-white/10 px-4 sm:px-6 lg:px-8 py-3.5 shadow-xl">
+      <header className="relative z-20 w-full mana-header-royal px-4 sm:px-6 lg:px-8 py-3.5 shadow-xl">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Logo & Tiêu đề */}
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative group shrink-0">
-              <div className="absolute -inset-1 bg-gradient-to-r from-tertiary via-primary to-emerald-400 rounded-xl blur opacity-70 group-hover:opacity-100 transition duration-300" />
-              <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#11162b] border border-white/20 p-1 flex items-center justify-center">
+              <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white border-2 border-[#c7dcff] p-1 flex items-center justify-center shadow-md">
                 <img
                   src={MANABIE_LOGO}
                   alt="Manabie Logo"
@@ -361,11 +370,11 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
 
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-400/30 flex items-center gap-1 shadow-sm">
-                  <span className="material-symbols-outlined text-[13px] text-amber-400">admin_panel_settings</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-400/25 text-amber-200 mana-keep-white text-[10px] font-black uppercase tracking-wider border border-amber-300/40 flex items-center gap-1 shadow-sm">
+                  <span className="material-symbols-outlined text-[13px] text-amber-300 mana-keep-white">admin_panel_settings</span>
                   <span>HOST • BAN TỔ CHỨC</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-[11px] text-on-surface-variant font-mono">
+                <span className="flex items-center gap-1.5 text-[11px] text-blue-100 mana-keep-white font-mono">
                   <span
                     className={`w-2 h-2 rounded-full ${
                       isDbConnected ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'
@@ -376,12 +385,12 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   </span>
                 </span>
               </div>
-              <h1 className="text-base sm:text-xl md:text-2xl font-black text-white uppercase tracking-tight truncate flex items-center gap-2 mt-0.5">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-tertiary">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black text-white mana-keep-white uppercase tracking-tight truncate flex items-center gap-2 mt-0.5">
+                <span className="text-white mana-keep-white">
                   ĐẤU TRƯỜNG KÉO CO CON NGƯỜI VS AI
                 </span>
               </h1>
-              <p className="text-[11px] sm:text-xs text-on-surface-variant truncate font-semibold">
+              <p className="text-[11px] sm:text-xs text-blue-100/90 mana-keep-white truncate font-semibold">
                 BẢNG VINH DANH & TỔNG HỢP KẾT QUẢ • CHUYÊN ĐỀ 12 TIẾT AI
               </p>
             </div>
@@ -397,25 +406,25 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 refreshData(true);
               }}
               disabled={isLoading}
-              className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-highest text-on-surface text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white mana-keep-white text-xs font-bold border border-white/25 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               title="Làm mới dữ liệu từ máy chủ"
             >
               <span
-                className={`material-symbols-outlined text-[16px] text-tertiary ${
+                className={`material-symbols-outlined text-[16px] text-amber-300 mana-keep-white ${
                   isLoading ? 'animate-spin' : ''
                 }`}
               >
                 refresh
               </span>
               <span className="hidden sm:inline">Làm mới</span>
-              <span className="text-[10px] text-on-surface-variant font-mono">({lastUpdated})</span>
+              <span className="text-[10px] text-blue-100 mana-keep-white font-mono">({lastUpdated})</span>
             </button>
 
             {/* Nút Xuất Excel/CSV */}
             <button
               type="button"
               onClick={handleExportCsv}
-              className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-highest text-emerald-300 text-xs font-bold border border-emerald-400/25 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              className="px-3 py-1.5 rounded-xl btn-mana-green text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
               title="Xuất danh sách ra file Excel / CSV"
             >
               <span className="material-symbols-outlined text-[16px]">download</span>
@@ -429,7 +438,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 audio.playClick();
                 setShowQuestionsModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-highest text-secondary text-xs font-bold border border-secondary/25 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white mana-keep-white text-xs font-bold border border-white/25 flex items-center gap-1.5 transition-all cursor-pointer"
               title="Xem 12 tình huống kéo co AI & Giải nghĩa sư phạm"
             >
               <span className="material-symbols-outlined text-[16px]">menu_book</span>
@@ -440,7 +449,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="p-2 rounded-xl bg-surface-container hover:bg-surface-container-highest text-on-surface text-xs font-bold border border-white/10 flex items-center justify-center transition-all cursor-pointer"
+              className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white mana-keep-white text-xs font-bold border border-white/25 flex items-center justify-center transition-all cursor-pointer"
               title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình chiếu LED'}
             >
               <span className="material-symbols-outlined text-[18px]">
@@ -455,7 +464,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 audio.playClick();
                 onNavigateToGame();
               }}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 via-tertiary to-emerald-300 text-[#032117] text-xs sm:text-sm font-black uppercase tracking-wider shadow-[0_0_20px_rgba(23,219,229,0.4)] hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 rounded-xl btn-mana-orange text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">sports_esports</span>
               <span>Vào Đấu Trường Game</span>
@@ -471,19 +480,22 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
          * =================================================================== */}
         <section
           aria-label="Bộ lọc ngày tập huấn"
-          className="relative p-3.5 sm:p-4 rounded-2xl bg-surface-container-high/70 backdrop-blur-xl border border-white/10 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
+          className="relative p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-[#bfdbfe] shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
         >
           {/* Thông tin ngày đang chọn */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-tertiary/20 border border-tertiary/40 flex items-center justify-center shrink-0 text-tertiary shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#ebf9f1] border-2 border-[#86efac] flex items-center justify-center shrink-0 text-[#15803d] shadow-xs">
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black uppercase text-white tracking-wide">
+                <span
+                  className="text-xs font-black uppercase text-[#1b3a8a] tracking-wide"
+                  style={{ color: '#1b3a8a' }}
+                >
                   THEO DÕI THEO BUỔI TẬP HUẤN
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-white/10 text-tertiary border border-tertiary/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-black bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]">
                   {selectedDate === 'all'
                     ? '🌐 Tất cả các ngày'
                     : selectedDate === todayKey
@@ -491,8 +503,8 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                     : `📅 Ngày ${formatDisplayDate(selectedDate)}`}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant truncate">
-                Đang hiển thị <strong className="text-white font-mono">{dateFilteredEntries.length}</strong> đấu thủ
+              <p className="text-[11px] text-slate-500 truncate font-medium">
+                Đang hiển thị <strong className="text-[#1b3a8a] font-mono font-black">{dateFilteredEntries.length}</strong> đấu thủ
                 {selectedDate !== 'all'
                   ? ` trong buổi tập huấn ngày ${formatDisplayDate(selectedDate)}`
                   : ' qua toàn bộ các buổi tập huấn'}
@@ -509,16 +521,20 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 audio.playClick();
                 setSelectedDate('all');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border-2 shadow-xs ${
                 selectedDate === 'all'
-                  ? 'bg-gradient-to-r from-tertiary to-emerald-400 text-[#032117] font-black border-tertiary shadow-[0_0_15px_rgba(23,219,229,0.35)]'
-                  : 'bg-surface-container hover:bg-surface-container-highest text-on-surface border-white/10'
+                  ? 'btn-mana-blue text-white border-[#1d4ed8]'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
               }`}
               title="Xem bảng xếp hạng tổng hợp tất cả các ngày"
             >
               <span className="material-symbols-outlined text-[16px]">public</span>
               <span>Tất cả</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                  selectedDate === 'all' ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-700'
+                }`}
+              >
                 {entries.length}
               </span>
             </button>
@@ -530,16 +546,20 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 audio.playClick();
                 setSelectedDate(todayKey);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border-2 shadow-xs ${
                 selectedDate === todayKey
-                  ? 'bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
-                  : 'bg-surface-container hover:bg-surface-container-highest text-amber-300 border-amber-400/20'
+                  ? 'btn-mana-orange text-white border-[#c2410c]'
+                  : 'bg-white hover:bg-orange-50 text-[#c2410c] border-orange-300'
               }`}
               title="Xem bảng xếp hạng buổi tập huấn hôm nay"
             >
-              <span className="material-symbols-outlined text-[16px]">today</span>
-              <span>Hôm nay</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/25 font-mono">
+              <span className="material-symbols-outlined text-[16px] text-orange-600">today</span>
+              <span className="font-bold text-[#c2410c]">Hôm nay</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                  selectedDate === todayKey ? 'bg-black/20 text-white' : 'bg-orange-100 text-orange-900'
+                }`}
+              >
                 {todayCount}
               </span>
             </button>
@@ -552,7 +572,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   audio.playClick();
                   setSelectedDate(e.target.value);
                 }}
-                className="px-2.5 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-white focus:outline-none focus:border-tertiary cursor-pointer font-bold"
+                className="px-2.5 py-1.5 text-xs rounded-xl bg-white border-2 border-slate-300 text-slate-800 focus:outline-none focus:border-[#2563eb] cursor-pointer font-bold shadow-xs"
                 title="Chọn ngày từ danh sách các buổi tập huấn trước"
               >
                 <option value="all">-- Chọn buổi tập huấn --</option>
@@ -575,7 +595,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 }
               }}
               title="Chọn ngày cụ thể từ lịch"
-              className="px-2.5 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-white focus:outline-none focus:border-tertiary cursor-pointer font-mono"
+              className="px-2.5 py-1.5 text-xs rounded-xl bg-white border-2 border-slate-300 text-slate-800 focus:outline-none focus:border-[#2563eb] cursor-pointer font-mono font-bold shadow-xs"
             />
           </div>
         </section>
@@ -583,14 +603,17 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
         {/* ===================================================================
          * KHỐI 1: BỤC VINH DANH TOP 1 - 2 - 3 (GRAND STAGE PODIUM)
          * =================================================================== */}
-        <section aria-label="Bục vinh danh Top 3" className="relative p-4 sm:p-6 rounded-3xl bg-gradient-to-b from-surface-container-high/60 via-surface-container/40 to-surface-container-lowest/80 border border-white/10 shadow-2xl overflow-hidden">
+        <section aria-label="Bục vinh danh Top 3" className="relative p-4 sm:p-6 rounded-3xl bg-white border-2 border-[#bfdbfe] shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-amber-400 text-[26px]">military_tech</span>
+              <span className="material-symbols-outlined text-amber-500 text-[28px]">military_tech</span>
               <div>
-                <h2 className="text-base sm:text-xl font-black uppercase text-white tracking-wide flex items-center gap-2 flex-wrap">
+                <h2
+                  className="text-base sm:text-xl font-black uppercase text-[#1b3a8a] tracking-wide flex items-center gap-2 flex-wrap"
+                  style={{ color: '#1b3a8a' }}
+                >
                   <span>BẢNG VINH DANH TOP 1 - 2 - 3</span>
-                  <span className="text-xs sm:text-sm font-bold text-tertiary normal-case">
+                  <span className="text-xs sm:text-sm font-bold text-[#2563eb] normal-case bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                     {selectedDate === 'all'
                       ? '• Toàn bộ thời gian'
                       : selectedDate === todayKey
@@ -598,7 +621,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                       : `• Buổi ngày ${formatDisplayDate(selectedDate)}`}
                   </span>
                 </h2>
-                <p className="text-[11px] sm:text-xs text-on-surface-variant">
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                   Tiêu chí xếp hạng: Số câu đúng nhiều nhất → Thời gian hoàn thành nhanh nhất → Điểm số
                 </p>
               </div>
@@ -611,11 +634,11 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 audio.playClick();
                 setShowResetConfirm(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-error/15 hover:bg-error/25 text-error border border-error/30 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-[#be123c] border-2 border-rose-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               title={selectedDate !== 'all' ? `Đặt lại kết quả ngày ${formatDisplayDate(selectedDate)}` : 'Đặt lại toàn bộ Bảng xếp hạng'}
             >
-              <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-              <span className="hidden sm:inline">Đặt lại BXH</span>
+              <span className="material-symbols-outlined text-[16px] text-rose-600">delete_sweep</span>
+              <span className="hidden sm:inline font-bold text-[#be123c]">Đặt lại BXH</span>
             </button>
           </div>
 
@@ -624,45 +647,51 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             {/* TOP 2 - Á QUÂN (BÊN TRÁI) */}
             <div className="order-2 md:order-1 flex flex-col items-center">
               {top3.second ? (
-                <div className="w-full flex flex-col items-center p-4 rounded-2xl bg-gradient-to-t from-slate-400/15 via-surface-container to-surface-container-high border-2 border-slate-300/40 shadow-xl relative group hover:border-slate-300 transition-all">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-400 text-slate-900 font-black text-base shadow mb-2">
+                <div className="w-full flex flex-col items-center p-4 rounded-2xl bg-gradient-to-t from-slate-100 via-white to-slate-50 border-2 border-slate-300 shadow-[0_5px_0_#94a3b8] relative group hover:border-slate-400 transition-all">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 text-slate-800 font-black text-base shadow mb-2">
                     🥈
                   </span>
-                  <div className="relative w-16 h-16 rounded-2xl bg-[#1a1c2e] border-2 border-slate-300/50 p-1 mb-2 shadow-[0_0_20px_rgba(203,213,225,0.3)]">
+                  <div className="relative w-16 h-16 rounded-2xl bg-[#eff6ff] border-2 border-slate-300 p-1 mb-2 shadow-sm">
                     <img
                       src={top3.second.characterImage || resolveEntryCharacter(top3.second).image}
                       alt={top3.second.name}
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-300/20 text-slate-200 font-black text-[9px] uppercase mb-1">
+                  <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-black text-[9px] uppercase mb-1">
                     Á QUÂN • TOP 2
                   </span>
-                  <h3 className="text-sm sm:text-base font-black text-white text-center truncate max-w-[200px]">
+                  <h3
+                    className="text-sm sm:text-base font-black text-slate-900 text-center truncate max-w-[200px]"
+                    style={{ color: '#0f172a' }}
+                  >
                     {top3.second.name}
                   </h3>
-                  <span className="text-[11px] text-on-surface-variant text-center truncate max-w-[200px] mb-2">
+                  <span
+                    className="text-[11px] text-[#1e3a8a] font-bold text-center truncate max-w-[200px] mb-2"
+                    style={{ color: '#1e3a8a' }}
+                  >
                     {top3.second.characterName || resolveEntryCharacter(top3.second).name}
                   </span>
-                  <div className="w-full grid grid-cols-3 gap-1 pt-2 border-t border-white/10 text-center font-mono text-xs">
+                  <div className="w-full grid grid-cols-3 gap-1 pt-2 border-t-2 border-slate-100 text-center font-mono text-xs">
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">ĐÚNG</span>
-                      <strong className="text-emerald-400 font-black">{top3.second.correctCount}/{top3.second.totalQuestions}</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">ĐÚNG</span>
+                      <strong className="text-[#15803d] font-black">{top3.second.correctCount}/{top3.second.totalQuestions}</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">THỜI GIAN</span>
-                      <strong className="text-amber-300 font-black">{top3.second.totalDurationSec}s</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">THỜI GIAN</span>
+                      <strong className="text-[#2563eb] font-black">{top3.second.totalDurationSec}s</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">ĐIỂM</span>
-                      <strong className="text-white font-black">{top3.second.score}</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">ĐIỂM</span>
+                      <strong className="text-[#1b3a8a] font-black">{top3.second.score}</strong>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-48 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-4 text-center text-on-surface-variant/60">
+                <div className="w-full h-48 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-4 text-center text-slate-400">
                   <span className="text-2xl mb-1">🥈</span>
-                  <span className="text-xs font-bold uppercase">Chờ Á Quân</span>
+                  <span className="text-xs font-bold uppercase text-slate-500">Chờ Á Quân</span>
                 </div>
               )}
             </div>
@@ -670,8 +699,8 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             {/* TOP 1 - QUÁN QUÂN (Ở GIỮA - NỔI BẬT NHẤT) */}
             <div className="order-1 md:order-2 flex flex-col items-center -mt-2">
               {top3.first ? (
-                <div className="w-full flex flex-col items-center p-5 rounded-3xl bg-gradient-to-t from-amber-500/25 via-surface-container to-surface-container-high border-2 border-amber-400 shadow-[0_0_50px_rgba(251,191,36,0.3)] relative group hover:scale-[1.02] transition-all">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black text-[10px] uppercase shadow-lg flex items-center gap-1">
+                <div className="w-full flex flex-col items-center p-5 rounded-3xl bg-gradient-to-t from-amber-50 via-white to-amber-50/50 border-3 border-amber-400 shadow-[0_8px_0_#d97706,0_16px_32px_rgba(245,158,11,0.18)] relative group hover:scale-[1.02] transition-all">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black text-[10px] uppercase shadow-md flex items-center gap-1 border border-amber-300">
                     <span>👑 QUÁN QUÂN ĐẤU TRƯỜNG</span>
                   </div>
 
@@ -679,44 +708,50 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                     🥇
                   </span>
 
-                  <div className="relative w-20 h-20 rounded-2xl bg-[#241a05] border-2 border-amber-400 p-1.5 mb-2 shadow-[0_0_30px_rgba(251,191,36,0.6)]">
+                  <div className="relative w-20 h-20 rounded-2xl bg-[#fffbeb] border-2 border-amber-400 p-1.5 mb-2 shadow-md">
                     <img
                       src={top3.first.characterImage || resolveEntryCharacter(top3.first).image}
                       alt={top3.first.name}
                       className="w-full h-full object-contain"
                     />
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-amber-950 font-black text-[10px] flex items-center justify-center border border-white shadow">
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-amber-950 font-black text-[10px] flex items-center justify-center border-2 border-white shadow">
                       #1
                     </div>
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-black text-amber-300 text-center truncate max-w-[220px]">
+                  <h3
+                    className="text-base sm:text-lg font-black text-[#78350f] text-center truncate max-w-[220px]"
+                    style={{ color: '#78350f' }}
+                  >
                     {top3.first.name}
                   </h3>
-                  <span className="text-xs text-amber-200/80 text-center truncate max-w-[220px] mb-2 font-medium">
+                  <span
+                    className="text-xs text-[#1e3a8a] text-center truncate max-w-[220px] mb-2 font-black"
+                    style={{ color: '#1e3a8a' }}
+                  >
                     {top3.first.characterName || resolveEntryCharacter(top3.first).name}
                   </span>
 
-                  <div className="w-full grid grid-cols-3 gap-1 pt-2.5 border-t border-amber-400/30 text-center font-mono text-xs">
+                  <div className="w-full grid grid-cols-3 gap-1 pt-2.5 border-t-2 border-amber-200 text-center font-mono text-xs">
                     <div>
-                      <span className="text-[9.5px] text-on-surface-variant block font-sans">ĐÚNG</span>
-                      <strong className="text-emerald-400 font-black text-sm">{top3.first.correctCount}/{top3.first.totalQuestions}</strong>
+                      <span className="text-[9.5px] text-slate-500 block font-sans font-bold">ĐÚNG</span>
+                      <strong className="text-[#15803d] font-black text-sm">{top3.first.correctCount}/{top3.first.totalQuestions}</strong>
                     </div>
                     <div>
-                      <span className="text-[9.5px] text-on-surface-variant block font-sans">THỜI GIAN</span>
-                      <strong className="text-amber-300 font-black text-sm">{top3.first.totalDurationSec}s</strong>
+                      <span className="text-[9.5px] text-slate-500 block font-sans font-bold">THỜI GIAN</span>
+                      <strong className="text-[#2563eb] font-black text-sm">{top3.first.totalDurationSec}s</strong>
                     </div>
                     <div>
-                      <span className="text-[9.5px] text-on-surface-variant block font-sans">ĐIỂM SỐ</span>
-                      <strong className="text-white font-black text-sm">{top3.first.score} pts</strong>
+                      <span className="text-[9.5px] text-slate-500 block font-sans font-bold">ĐIỂM SỐ</span>
+                      <strong className="text-[#1b3a8a] font-black text-sm">{top3.first.score} pts</strong>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-56 rounded-3xl border-2 border-dashed border-amber-400/30 flex flex-col items-center justify-center p-4 text-center text-amber-200/60">
+                <div className="w-full h-56 rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/40 flex flex-col items-center justify-center p-4 text-center text-amber-800">
                   <span className="text-3xl mb-1">👑</span>
-                  <span className="text-sm font-black uppercase text-amber-300">Chờ Đón Quán Quân</span>
-                  <p className="text-[11px] text-on-surface-variant max-w-[200px] mt-1">
+                  <span className="text-sm font-black uppercase text-amber-800">Chờ Đón Quán Quân</span>
+                  <p className="text-[11px] text-slate-500 max-w-[200px] mt-1 font-medium">
                     {selectedDate !== 'all'
                       ? `Chưa có đấu thủ thi đấu trong ngày ${formatDisplayDate(selectedDate)}`
                       : 'Bắt đầu trận đấu để ghi tên đấu thủ đầu tiên lên đỉnh vinh quang!'}
@@ -728,45 +763,51 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             {/* TOP 3 - QUÝ QUÂN (BÊN PHẢI) */}
             <div className="order-3 flex flex-col items-center">
               {top3.third ? (
-                <div className="w-full flex flex-col items-center p-4 rounded-2xl bg-gradient-to-t from-amber-800/20 via-surface-container to-surface-container-high border-2 border-amber-700/50 shadow-xl relative group hover:border-amber-600 transition-all">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-amber-800 text-amber-100 font-black text-base shadow mb-2">
+                <div className="w-full flex flex-col items-center p-4 rounded-2xl bg-gradient-to-t from-orange-50 via-white to-orange-50/50 border-2 border-amber-500/50 shadow-[0_5px_0_#b45309] relative group hover:border-amber-600 transition-all">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-amber-700 text-amber-50 font-black text-base shadow mb-2">
                     🥉
                   </span>
-                  <div className="relative w-16 h-16 rounded-2xl bg-[#26150a] border-2 border-amber-700/60 p-1 mb-2 shadow-[0_0_20px_rgba(217,119,6,0.3)]">
+                  <div className="relative w-16 h-16 rounded-2xl bg-[#fff7ed] border-2 border-amber-500/50 p-1 mb-2 shadow-sm">
                     <img
                       src={top3.third.characterImage || resolveEntryCharacter(top3.third).image}
                       alt={top3.third.name}
                       className="w-full h-full object-contain"
                     />
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-700/25 text-amber-300 font-black text-[9px] uppercase mb-1">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-black text-[9px] uppercase mb-1">
                     QUÝ QUÂN • TOP 3
                   </span>
-                  <h3 className="text-sm sm:text-base font-black text-white text-center truncate max-w-[200px]">
+                  <h3
+                    className="text-sm sm:text-base font-black text-slate-900 text-center truncate max-w-[200px]"
+                    style={{ color: '#0f172a' }}
+                  >
                     {top3.third.name}
                   </h3>
-                  <span className="text-[11px] text-on-surface-variant text-center truncate max-w-[200px] mb-2">
+                  <span
+                    className="text-[11px] text-[#1e3a8a] font-bold text-center truncate max-w-[200px] mb-2"
+                    style={{ color: '#1e3a8a' }}
+                  >
                     {top3.third.characterName || resolveEntryCharacter(top3.third).name}
                   </span>
-                  <div className="w-full grid grid-cols-3 gap-1 pt-2 border-t border-white/10 text-center font-mono text-xs">
+                  <div className="w-full grid grid-cols-3 gap-1 pt-2 border-t-2 border-amber-100 text-center font-mono text-xs">
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">ĐÚNG</span>
-                      <strong className="text-emerald-400 font-black">{top3.third.correctCount}/{top3.third.totalQuestions}</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">ĐÚNG</span>
+                      <strong className="text-[#15803d] font-black">{top3.third.correctCount}/{top3.third.totalQuestions}</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">THỜI GIAN</span>
-                      <strong className="text-amber-300 font-black">{top3.third.totalDurationSec}s</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">THỜI GIAN</span>
+                      <strong className="text-[#2563eb] font-black">{top3.third.totalDurationSec}s</strong>
                     </div>
                     <div>
-                      <span className="text-[9px] text-on-surface-variant block">ĐIỂM</span>
-                      <strong className="text-white font-black">{top3.third.score}</strong>
+                      <span className="text-[9px] text-slate-500 font-sans font-bold block">ĐIỂM</span>
+                      <strong className="text-[#1b3a8a] font-black">{top3.third.score}</strong>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-full h-48 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-4 text-center text-on-surface-variant/60">
+                <div className="w-full h-48 rounded-2xl border-2 border-dashed border-amber-300 bg-orange-50/30 flex flex-col items-center justify-center p-4 text-center text-slate-400">
                   <span className="text-2xl mb-1">🥉</span>
-                  <span className="text-xs font-bold uppercase">Chờ Quý Quân</span>
+                  <span className="text-xs font-bold uppercase text-slate-500">Chờ Quý Quân</span>
                 </div>
               )}
             </div>
@@ -776,28 +817,33 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
         {/* ===================================================================
          * KHỐI 3: BẢNG DANH SÁCH CHI TIẾT (TÌM KIẾM, LỌC & PHÂN TRANG 20 NGƯỜI)
          * =================================================================== */}
-        <section aria-label="Bảng dữ liệu chi tiết" className="rounded-3xl bg-surface-container-low/95 border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+        <section aria-label="Bảng dữ liệu chi tiết" className="rounded-3xl bg-white border-2 border-[#bfdbfe] shadow-sm overflow-hidden flex flex-col">
           {/* Thanh công cụ tìm kiếm và bộ lọc */}
-          <div className="p-4 sm:p-5 bg-surface-container-high/60 border-b border-white/10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[22px] text-tertiary">table_rows</span>
+          <div className="p-4 sm:p-5 bg-[#f8fafc] border-b-2 border-slate-200 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#2563eb] flex items-center justify-center shrink-0 border border-blue-200">
+                <span className="material-symbols-outlined text-[20px]">table_rows</span>
+              </div>
               <div>
-                <h3 className="text-sm sm:text-base font-black text-white uppercase flex items-center gap-2 flex-wrap">
+                <h3
+                  className="text-sm sm:text-base font-black text-[#1b3a8a] uppercase flex items-center gap-2 flex-wrap"
+                  style={{ color: '#1b3a8a' }}
+                >
                   <span>DANH SÁCH ĐẤU THỦ</span>
-                  <span className="text-xs text-emerald-300 font-mono">
+                  <span className="text-xs text-[#15803d] font-mono bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-bold">
                     ({filteredList.length}/{dateFilteredEntries.length})
                   </span>
                   {selectedDate !== 'all' ? (
-                    <span className="text-[11px] text-tertiary font-sans font-bold">
+                    <span className="text-[11px] text-[#2563eb] font-sans font-bold">
                       • Buổi {selectedDate === todayKey ? 'hôm nay ' : ''}({formatDisplayDate(selectedDate)})
                     </span>
                   ) : (
-                    <span className="text-[11px] text-on-surface-variant font-sans font-normal">
+                    <span className="text-[11px] text-slate-500 font-sans font-medium">
                       • Toàn bộ thời gian ({entries.length} lượt)
                     </span>
                   )}
                 </h3>
-                <span className="text-[11px] text-on-surface-variant">
+                <span className="text-[11px] text-slate-500 font-medium">
                   Hiển thị giới hạn 20 người mỗi trang theo tiêu chuẩn sự kiện
                 </span>
               </div>
@@ -807,7 +853,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
             <div className="flex items-center gap-2 flex-wrap">
               {/* Ô tìm kiếm */}
               <div className="relative flex-1 sm:w-60">
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant pointer-events-none">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400 pointer-events-none">
                   search
                 </span>
                 <input
@@ -818,13 +864,13 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                     setCurrentPage(1);
                   }}
                   placeholder="Tìm tên đấu thủ..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-tertiary"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white border-2 border-slate-300 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#2563eb] font-medium shadow-xs"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-white cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer text-sm font-bold"
                   >
                     ×
                   </button>
@@ -838,7 +884,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   setModeFilter(e.target.value as any);
                   setCurrentPage(1);
                 }}
-                className="px-3 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-on-surface focus:outline-none focus:border-tertiary cursor-pointer font-bold"
+                className="px-3 py-1.5 text-xs rounded-xl bg-white border-2 border-slate-300 text-slate-800 focus:outline-none focus:border-[#2563eb] cursor-pointer font-bold shadow-xs"
               >
                 <option value="all">Tất cả chế độ</option>
                 <option value="ar">Chỉ Camera AR</option>
@@ -852,7 +898,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   setPerfFilter(e.target.value as any);
                   setCurrentPage(1);
                 }}
-                className="px-3 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-on-surface focus:outline-none focus:border-tertiary cursor-pointer font-bold"
+                className="px-3 py-1.5 text-xs rounded-xl bg-white border-2 border-slate-300 text-slate-800 focus:outline-none focus:border-[#2563eb] cursor-pointer font-bold shadow-xs"
               >
                 <option value="all">Tất cả thành tích</option>
                 <option value="perfect">Đạt 100% đúng</option>
@@ -863,7 +909,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value as any)}
-                className="px-3 py-1.5 text-xs rounded-xl bg-surface-container-lowest border border-white/15 text-tertiary focus:outline-none focus:border-tertiary cursor-pointer font-bold"
+                className="px-3 py-1.5 text-xs rounded-xl bg-white border-2 border-[#93c5fd] text-[#1d4ed8] focus:outline-none focus:border-[#2563eb] cursor-pointer font-bold shadow-xs"
               >
                 <option value="rank">Sắp xếp: Thứ hạng chuẩn</option>
                 <option value="time">Sắp xếp: Nhanh nhất</option>
@@ -877,7 +923,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-label-kicker text-on-surface-variant uppercase bg-surface-container/60 text-[10.5px]">
+                <tr className="border-b-2 border-slate-200 text-[#1b3a8a] uppercase bg-[#eff6ff] text-[11px] font-black">
                   <th className="py-3 px-3 sm:px-4 text-center w-16 sm:w-20">Hạng</th>
                   <th className="py-3 px-3 sm:px-4">Đấu Thủ & Bạn Đồng Hành</th>
                   <th className="py-3 px-3 sm:px-4 text-center">Chế độ</th>
@@ -888,12 +934,12 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   <th className="py-3 px-3 sm:px-4 text-center hidden lg:table-cell">Thời điểm</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-slate-100">
                 {pagedList.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-on-surface-variant text-sm">
+                    <td colSpan={8} className="text-center py-12 text-slate-500 text-sm font-medium">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[32px] text-on-surface-variant/40">
+                        <span className="material-symbols-outlined text-[36px] text-slate-300">
                           inbox
                         </span>
                         <span>
@@ -915,13 +961,13 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                     return (
                       <tr
                         key={entry.id}
-                        className={`transition-colors hover:bg-surface-container/40 ${
+                        className={`transition-colors hover:bg-slate-50/80 ${
                           rank === 1
-                            ? 'bg-amber-500/10'
+                            ? 'bg-amber-50/60'
                             : rank === 2
-                            ? 'bg-slate-300/10'
+                            ? 'bg-slate-50/80'
                             : rank === 3
-                            ? 'bg-amber-700/10'
+                            ? 'bg-orange-50/60'
                             : ''
                         }`}
                       >
@@ -940,7 +986,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                               🥉
                             </span>
                           ) : (
-                            <span className="font-mono font-bold text-on-surface-variant">
+                            <span className="font-mono font-bold text-slate-500">
                               #{rank}
                             </span>
                           )}
@@ -952,20 +998,20 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                             <img
                               src={entry.characterImage || char.image}
                               alt={entry.characterName || char.name}
-                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-[#190f38] border border-white/15 p-0.5 shrink-0 shadow-sm"
+                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain bg-[#eff6ff] border-2 border-blue-200 p-0.5 shrink-0 shadow-xs"
                             />
                             <div className="flex flex-col min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-black text-white text-xs sm:text-sm truncate">
+                                <span className="font-black text-slate-900 text-xs sm:text-sm truncate">
                                   {entry.name}
                                 </span>
                                 {rank <= 3 && (
-                                  <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-400/25 text-amber-300 border border-amber-400/40">
+                                  <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300">
                                     TOP {rank}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[10.5px] text-emerald-300 truncate">
+                              <span className="text-[10.5px] text-[#2563eb] font-bold truncate">
                                 {entry.characterName || char.name}
                               </span>
                             </div>
@@ -977,8 +1023,8 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                               entry.mode === 'ar'
-                                ? 'bg-tertiary/15 text-tertiary border border-tertiary/30'
-                                : 'bg-surface-container text-secondary border border-white/10'
+                                ? 'bg-[#ebf9f1] text-[#15803d] border border-[#86efac]'
+                                : 'bg-[#eff6ff] text-[#2563eb] border border-[#bfdbfe]'
                             }`}
                           >
                             <span className="material-symbols-outlined text-[13px]">
@@ -991,40 +1037,40 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                         {/* Cột Số câu đúng */}
                         <td className="py-3 px-3 sm:px-4 text-center">
                           <div className="inline-flex flex-col items-center">
-                            <span className="font-mono font-black text-emerald-400">
+                            <span className="font-mono font-black text-[#15803d]">
                               {entry.correctCount}/{entry.totalQuestions}
                             </span>
-                            <span className="text-[10px] text-on-surface-variant font-mono">
+                            <span className="text-[10px] text-slate-500 font-mono font-bold">
                               ({accuracy}%)
                             </span>
                           </div>
                         </td>
 
                         {/* Cột Thời gian hoàn thành */}
-                        <td className="py-3 px-3 sm:px-4 text-center font-mono font-bold text-amber-300">
+                        <td className="py-3 px-3 sm:px-4 text-center font-mono font-black text-[#2563eb]">
                           {entry.totalDurationSec}s
                         </td>
 
                         {/* Cột Chuỗi thắng */}
-                        <td className="py-3 px-3 sm:px-4 text-center font-mono font-bold text-red-400 hidden md:table-cell">
+                        <td className="py-3 px-3 sm:px-4 text-center font-mono font-black text-orange-600 hidden md:table-cell">
                           {(entry.maxWinStreak || 0) > 0 ? `🔥 x${entry.maxWinStreak}` : '—'}
                         </td>
 
                         {/* Cột Điểm số */}
-                        <td className="py-3 px-3 sm:px-4 text-right font-mono font-black text-white text-sm">
+                        <td className="py-3 px-3 sm:px-4 text-right font-mono font-black text-[#1b3a8a] text-sm">
                           {entry.score} pts
                         </td>
 
                         {/* Cột Thời điểm thi */}
-                        <td className="py-3 px-3 sm:px-4 text-center text-[10.5px] text-on-surface-variant font-mono hidden lg:table-cell">
+                        <td className="py-3 px-3 sm:px-4 text-center text-[10.5px] text-slate-500 font-mono hidden lg:table-cell">
                           {entry.timestamp ? (
                             selectedDate === 'all' ? (
                               <div className="flex flex-col items-center leading-tight">
-                                <span className="text-white/85 font-semibold">{formatDisplayDate(getDateKey(entry.timestamp))}</span>
-                                <span className="text-[9.5px] text-on-surface-variant">{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
+                                <span className="text-slate-800 font-bold">{formatDisplayDate(getDateKey(entry.timestamp))}</span>
+                                <span className="text-[9.5px] text-slate-500 font-medium">{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
                               </div>
                             ) : (
-                              <span>{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
+                              <span className="font-medium text-slate-700">{new Date(entry.timestamp).toLocaleTimeString('vi-VN')}</span>
                             )
                           ) : (
                             '—'
@@ -1040,16 +1086,16 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
 
           {/* THANH ĐIỀU HƯỚNG PHÂN TRANG (20 NGƯỜI / TRANG) */}
           {totalPages > 1 && (
-            <div className="p-3.5 sm:p-4 bg-surface-container-high/40 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
+            <div className="p-3.5 sm:p-4 bg-[#f8fafc] border-t-2 border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
               {/* Thống kê phạm vi */}
-              <div className="text-xs text-on-surface-variant font-medium flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
+              <div className="text-xs text-slate-600 font-medium flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
                 <span>Hiển thị</span>
-                <strong className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">
+                <strong className="text-[#1b3a8a] font-mono font-black bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
                   {startIndex + 1}–{endIndex}
                 </strong>
                 <span>trên tổng số</span>
-                <strong className="text-tertiary font-mono">{filteredList.length}</strong>
-                <span>đấu thủ • Trang <strong className="text-white font-mono">{currentPage}</strong> / {totalPages}</span>
+                <strong className="text-[#15803d] font-mono font-black">{filteredList.length}</strong>
+                <span>đấu thủ • Trang <strong className="text-[#1b3a8a] font-mono font-black">{currentPage}</strong> / {totalPages}</span>
               </div>
 
               {/* Dãy số trang: 1, 2, 3... */}
@@ -1058,7 +1104,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border border-white/10 disabled:opacity-25 disabled:cursor-not-allowed bg-surface-container hover:bg-surface-container-highest text-on-surface active:scale-95"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border-2 border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed bg-white hover:bg-slate-100 text-slate-700 shadow-xs"
                   title="Trang trước"
                 >
                   <span className="material-symbols-outlined text-[16px]">chevron_left</span>
@@ -1070,7 +1116,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                     return (
                       <span
                         key={`ellipsis-${pIdx}`}
-                        className="w-7 text-center text-xs font-bold text-on-surface-variant/60 select-none"
+                        className="w-7 text-center text-xs font-bold text-slate-400 select-none"
                       >
                         ...
                       </span>
@@ -1085,10 +1131,10 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                       key={pageNum}
                       type="button"
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer relative flex items-center justify-center ${
+                      className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative flex items-center justify-center border-2 ${
                         isActive
-                          ? 'bg-gradient-to-r from-emerald-400 to-tertiary text-[#032117] font-black shadow-[0_0_15px_rgba(23,219,229,0.5)] scale-105'
-                          : 'bg-surface-container hover:bg-surface-container-highest text-on-surface border border-white/10 hover:border-white/25 active:scale-95'
+                          ? 'btn-mana-blue text-white font-black border-[#1d4ed8] shadow-sm'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 active:scale-95 shadow-xs'
                       }`}
                     >
                       {pageNum}
@@ -1100,7 +1146,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border border-white/10 disabled:opacity-25 disabled:cursor-not-allowed bg-surface-container hover:bg-surface-container-highest text-on-surface active:scale-95"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border-2 border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed bg-white hover:bg-slate-100 text-slate-700 shadow-xs"
                   title="Trang sau"
                 >
                   <span className="hidden sm:inline">Sau</span>
@@ -1113,10 +1159,10 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
       </main>
 
       {/* FOOTER TRANG HOST */}
-      <footer className="relative z-10 w-full bg-surface-container-lowest/90 border-t border-white/10 py-3 text-center text-xs text-on-surface-variant">
+      <footer className="relative z-10 w-full bg-white border-t-2 border-slate-200 py-3 text-center text-xs text-slate-500 font-medium">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Manabie AI EdTech Platform • Chuyên đề 12 Tiết AI Cốt Lõi 2026</span>
-          <span className="text-[11px] font-mono text-tertiary">
+          <span className="text-[11px] font-mono text-[#2563eb] font-bold">
             Đường dẫn Quản trị: <strong>/host</strong>
           </span>
         </div>
@@ -1127,30 +1173,30 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
        * =================================================================== */}
       {showResetConfirm && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 select-none"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 select-none"
           onClick={() => setShowResetConfirm(false)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-surface-container-high border-2 border-error/50 p-5 sm:p-6 shadow-2xl relative"
+            className="w-full max-w-lg rounded-3xl bg-white border-4 border-rose-500 p-5 sm:p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 text-error mb-3">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
               <span className="material-symbols-outlined text-[32px]">warning</span>
-              <h3 className="text-lg font-black uppercase text-white">XÁC NHẬN ĐẶT LẠI BXH</h3>
+              <h3 className="text-lg font-black uppercase text-slate-900">XÁC NHẬN ĐẶT LẠI BXH</h3>
             </div>
-            <div className="text-xs sm:text-sm text-on-surface-variant leading-relaxed mb-5">
+            <div className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-5 font-medium">
               {selectedDate !== 'all' ? (
                 <div className="space-y-2">
                   <p>
-                    Bạn đang theo dõi buổi tập huấn <strong className="text-tertiary">Ngày {formatDisplayDate(selectedDate)}</strong> ({dateFilteredEntries.length} lượt đấu).
+                    Bạn đang theo dõi buổi tập huấn <strong className="text-[#2563eb]">Ngày {formatDisplayDate(selectedDate)}</strong> ({dateFilteredEntries.length} lượt đấu).
                   </p>
-                  <p className="p-3 rounded-xl bg-surface-container-lowest border border-white/10 text-on-surface">
-                    💡 <strong>Gợi ý:</strong> Bạn có thể chọn <span className="text-amber-400 font-bold">Chỉ xóa ngày này</span> để làm sạch dữ liệu cho buổi tập huấn hiện tại mà không làm mất lịch sử các ngày khác.
+                  <p className="p-3 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900">
+                    💡 <strong>Gợi ý:</strong> Bạn có thể chọn <span className="text-amber-700 font-black">Chỉ xóa ngày này</span> để làm sạch dữ liệu cho buổi tập huấn hiện tại mà không làm mất lịch sử các ngày khác.
                   </p>
                 </div>
               ) : (
                 <p>
-                  Thao tác này sẽ <strong className="text-error">xóa toàn bộ danh sách điểm số và đấu thủ ({entries.length} người)</strong> trên cả trình duyệt hiện tại và máy chủ cơ sở dữ liệu.
+                  Thao tác này sẽ <strong className="text-rose-600 font-black">xóa toàn bộ danh sách điểm số và đấu thủ ({entries.length} người)</strong> trên cả trình duyệt hiện tại và máy chủ cơ sở dữ liệu.
                   Dữ liệu sau khi xóa sẽ không thể phục hồi.
                 </p>
               )}
@@ -1159,7 +1205,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
-                className="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-highest text-on-surface text-xs font-bold border border-white/10 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 cursor-pointer"
               >
                 Hủy bỏ
               </button>
@@ -1167,7 +1213,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
                 <button
                   type="button"
                   onClick={handleResetSelectedDate}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-lg"
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-md"
                 >
                   Chỉ xóa ngày này ({dateFilteredEntries.length})
                 </button>
@@ -1175,7 +1221,7 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
               <button
                 type="button"
                 onClick={handleResetAll}
-                className="px-4 py-2 rounded-xl bg-error hover:bg-error-container text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-lg"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase cursor-pointer transition-colors shadow-md"
               >
                 {selectedDate !== 'all' ? `Xóa tất cả (${entries.length})` : 'Xác nhận Xóa Hết'}
               </button>
@@ -1189,24 +1235,24 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
        * =================================================================== */}
       {showQuestionsModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 select-none"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 select-none"
           onClick={() => setShowQuestionsModal(false)}
         >
           <div
-            className="w-full max-w-3xl max-h-[90vh] rounded-3xl bg-surface-container-high border border-tertiary/40 p-4 sm:p-6 shadow-2xl flex flex-col relative"
+            className="w-full max-w-3xl max-h-[90vh] rounded-3xl bg-white border-4 border-[#2563eb] p-4 sm:p-6 shadow-2xl flex flex-col relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
-              <div className="flex items-center gap-2 text-tertiary">
-                <span className="material-symbols-outlined text-[24px]">school</span>
-                <h3 className="text-base sm:text-lg font-black text-white uppercase">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-slate-200">
+              <div className="flex items-center gap-2 text-[#2563eb]">
+                <span className="material-symbols-outlined text-[26px]">school</span>
+                <h3 className="text-base sm:text-lg font-black text-[#1b3a8a] uppercase">
                   NGÂN HÀNG 12 CÂU HỎI KÉO CO & GIẢI NGHĨA SƯ PHẠM
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowQuestionsModal(false)}
-                className="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-highest text-white flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer text-lg font-bold"
               >
                 ×
               </button>
@@ -1216,42 +1262,42 @@ export function HostDashboardPage({ onNavigateToGame }: HostDashboardPageProps) 
               {TUG_QUESTIONS.map((q, idx) => (
                 <div
                   key={q.id}
-                  className="p-3.5 rounded-2xl bg-surface-container-lowest/80 border border-white/10 flex flex-col gap-1.5"
+                  className="p-3.5 rounded-2xl bg-[#f8fafc] border-2 border-slate-200 flex flex-col gap-1.5"
                 >
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[11px] font-black uppercase text-tertiary">
+                    <span className="text-[11px] font-black uppercase text-[#2563eb]">
                       CÂU {idx + 1}: {q.toolName}
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         q.hasAI
-                          ? 'bg-tertiary/20 text-tertiary border border-tertiary/40'
-                          : 'bg-secondary-container/40 text-secondary border border-secondary/40'
+                          ? 'bg-blue-100 text-[#1d4ed8] border border-blue-300'
+                          : 'bg-emerald-100 text-[#15803d] border border-emerald-300'
                       }`}
                     >
                       {q.hasAI ? '👉 CÓ SỬ DỤNG AI' : '👈 KHÔNG CÓ AI'}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm font-bold text-white leading-relaxed">
+                  <p className="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">
                     {q.question}
                   </p>
-                  <div className="mt-1 p-2 rounded-xl bg-white/5 border border-white/5 text-[11px] text-on-surface-variant flex items-start gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-tertiary shrink-0 mt-0.5">
+                  <div className="mt-1 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 text-[11px] text-slate-700 flex items-start gap-1.5 font-medium">
+                    <span className="material-symbols-outlined text-[16px] text-amber-500 shrink-0 mt-0.5">
                       lightbulb
                     </span>
                     <span>
-                      <strong className="text-tertiary">Giải nghĩa sư phạm:</strong> {q.insight}
+                      <strong className="text-[#1b3a8a] font-bold">Giải nghĩa sư phạm:</strong> {q.insight}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="pt-3 border-t border-white/10 flex justify-end">
+            <div className="pt-3 border-t-2 border-slate-200 flex justify-end">
               <button
                 type="button"
                 onClick={() => setShowQuestionsModal(false)}
-                className="px-5 py-2 rounded-xl bg-tertiary text-[#032117] text-xs font-black uppercase cursor-pointer hover:brightness-110"
+                className="px-5 py-2 rounded-xl btn-mana-blue text-white text-xs font-black uppercase cursor-pointer"
               >
                 Đóng
               </button>

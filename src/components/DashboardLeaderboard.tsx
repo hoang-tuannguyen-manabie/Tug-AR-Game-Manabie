@@ -276,7 +276,7 @@ export function DashboardLeaderboard({
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full ppt-page-enter">
       {/* HEADER DASHBOARD */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-surface-container-high via-surface-container to-surface-container-lowest p-3.5 sm:p-5 rounded-2xl border border-white/10 shadow-xl relative overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mana-card-3d p-3.5 sm:p-5 rounded-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-tertiary/10 to-transparent pointer-events-none" />
 
         <div className="flex flex-col gap-1 z-10">
@@ -285,12 +285,12 @@ export function DashboardLeaderboard({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
             </span>
-            <span className="text-[10px] sm:text-label-caps uppercase text-tertiary font-bold tracking-wider">
+            <span className="text-[10px] sm:text-label-caps uppercase text-tertiary font-black tracking-wider">
               LIVE DASHBOARD • HOẠT ĐỘNG TƯƠNG TÁC SƯ PHẠM 2026
             </span>
           </div>
           <h2 className="text-headline-md sm:text-headline-lg font-black text-on-surface uppercase tracking-tight">
-            BẢNG VINH DANH <span className="text-tertiary">TOP 1 - 2 - 3</span> ĐẤU TRƯỜNG KÉO CO
+            BẢNG VINH DANH <span className="text-primary">TOP 1 - 2 - 3</span> ĐẤU TRƯỜNG KÉO CO
           </h2>
           <p className="text-body-sm text-on-surface-variant flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[16px] text-tertiary">sort</span>
@@ -369,23 +369,23 @@ export function DashboardLeaderboard({
           </div>
 
           {/* Thông tin đấu thủ & bạn đồng hành đã thiết lập từ đầu */}
-          <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-surface-container-lowest/85 border border-white/10 shrink-0 shadow-inner">
+          <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-surface-container-lowest border-2 border-tertiary/30 shrink-0 shadow-sm">
             {currentStats.characterImage && (
               <img
                 src={currentStats.characterImage}
                 alt={currentStats.characterName || 'Nhân vật'}
-                className="w-10 h-10 rounded-xl object-contain bg-[#180c3a] border border-emerald-400/50 p-0.5 shrink-0 shadow-md"
+                className="w-10 h-10 rounded-xl object-contain bg-[#eaf2ff] border-2 border-tertiary/50 p-0.5 shrink-0 shadow-sm"
               />
             )}
             <div className="flex flex-col">
-              <span className="text-xs sm:text-sm font-black text-white leading-tight">
+              <span className="text-xs sm:text-sm font-black text-on-surface leading-tight">
                 {currentStats.playerName || 'Người chơi'}
               </span>
-              <span className="text-[10px] sm:text-xs font-bold text-emerald-300 leading-tight">
+              <span className="text-[10px] sm:text-xs font-bold text-primary leading-tight">
                 {currentStats.characterName ? `Đồng hành: ${currentStats.characterName}` : 'Đã ghi nhận kết quả'}
               </span>
             </div>
-            <span className="ml-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1 shadow-sm">
+            <span className="ml-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/15 text-primary border border-primary/30 flex items-center gap-1 shadow-sm">
               <span className="material-symbols-outlined text-[13px]">check_circle</span>
               <span>Đã lưu BXH</span>
             </span>
@@ -395,7 +395,7 @@ export function DashboardLeaderboard({
 
       {/* THÔNG BÁO KHI CHƯA CÓ LƯỢT CHƠI NÀO */}
       {sortedList.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-surface-container-low/70 rounded-2xl border border-white/10 my-2">
+        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center mana-card-3d rounded-2xl my-2">
           <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-3 text-tertiary shadow-inner">
             <span className="material-symbols-outlined text-[36px]">emoji_events</span>
           </div>
@@ -407,7 +407,7 @@ export function DashboardLeaderboard({
       )}
 
       {/* BẢNG XẾP HẠNG CHI TIẾT TOÀN DIỆN */}
-      <div className="rounded-2xl bg-surface-container-low/95 border border-white/10 shadow-xl overflow-hidden">
+      <div className="rounded-2xl mana-card-3d overflow-hidden">
         <div className="p-3 sm:p-4 bg-surface-container-high/60 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px] text-tertiary">format_list_numbered</span>
@@ -501,25 +501,25 @@ export function DashboardLeaderboard({
                           <img
                             src={entry.characterImage || resolveEntryCharacter(entry).image}
                             alt={entry.characterName || resolveEntryCharacter(entry).name}
-                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain bg-[#1e1148] border border-purple-400/35 p-0.5 shrink-0 shadow-sm"
+                            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain bg-[#eaf2ff] border-2 border-tertiary/30 p-0.5 shrink-0 shadow-sm"
                           />
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
-                              <span className={`font-bold ${isCurrent ? 'text-tertiary' : rank === 1 ? 'text-amber-300' : 'text-on-surface'}`}>
+                              <span className={`font-bold ${isCurrent ? 'text-tertiary' : rank === 1 ? 'text-amber-600' : 'text-on-surface'}`}>
                                 {entry.name}
                               </span>
                               {rank === 1 && (
-                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-400/25 text-amber-300 border border-amber-400/40">
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-400/30 text-amber-800 border border-amber-500/40">
                                   QUÁN QUÂN
                                 </span>
                               )}
                               {rank === 2 && (
-                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-slate-300/25 text-slate-200 border border-slate-300/40">
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-slate-300/40 text-slate-700 border border-slate-400/50">
                                   Á QUÂN
                                 </span>
                               )}
                               {rank === 3 && (
-                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-700/25 text-amber-300 border border-amber-600/40">
+                                <span className="px-1.5 py-0.2 rounded text-[8.5px] font-black uppercase bg-amber-700/20 text-amber-800 border border-amber-600/40">
                                   QUÝ QUÂN
                                 </span>
                               )}
@@ -529,7 +529,7 @@ export function DashboardLeaderboard({
                             </span>
                           </div>
                           {isCurrent && (
-                            <span className="px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase bg-tertiary text-[#032117] shadow-sm">
+                            <span className="px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase bg-tertiary text-white mana-keep-white shadow-sm">
                               BẠN
                             </span>
                           )}
@@ -542,7 +542,7 @@ export function DashboardLeaderboard({
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             entry.mode === 'ar'
                               ? 'bg-tertiary/15 text-tertiary border border-tertiary/30'
-                              : 'bg-primary-container/40 text-primary border border-primary/30'
+                              : 'bg-primary/15 text-primary border border-primary/30'
                           }`}
                         >
                           <span className="material-symbols-outlined text-[13px]">
@@ -555,7 +555,7 @@ export function DashboardLeaderboard({
                       {/* Cột Số câu đúng */}
                       <td className="py-2.5 px-3 sm:px-4 text-center">
                         <div className="inline-flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-tertiary">
+                          <span className="font-mono font-bold text-primary">
                             {entry.correctCount}/{entry.totalQuestions}
                           </span>
                           <span className="text-[10px] text-on-surface-variant hidden md:inline">
@@ -565,12 +565,12 @@ export function DashboardLeaderboard({
                       </td>
 
                       {/* Cột Thời gian */}
-                      <td className="py-2.5 px-3 sm:px-4 text-center font-mono font-bold text-amber-300">
+                      <td className="py-2.5 px-3 sm:px-4 text-center font-mono font-bold text-secondary">
                         {entry.totalDurationSec}s
                       </td>
 
                       {/* Cột Chuỗi thắng */}
-                      <td className="py-2.5 px-3 sm:px-4 text-center font-mono text-[11px] text-emerald-400 font-bold hidden md:table-cell">
+                      <td className="py-2.5 px-3 sm:px-4 text-center font-mono text-[11px] text-primary font-bold hidden md:table-cell">
                         {entry.maxWinStreak > 0 ? `🔥 x${entry.maxWinStreak}` : '—'}
                       </td>
 
